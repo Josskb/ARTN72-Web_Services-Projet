@@ -39,9 +39,9 @@ ALTER TABLE Adresse AUTO_INCREMENT = 1;
 -- INSERTION DES NOUVELLES DONNÉES
 -- ========================================
 
--------------------------
+-- -----------------------
 -- 1. INSERT Adresse
--------------------------
+-- -----------------------
 INSERT INTO Adresse (rue, ville, numero, code_postal) VALUES
 ('Avenue des Lumières', 'Paris', '12', '75001'),
 ('Boulevard du 7ème Art', 'Lyon', '45', '69003'),
@@ -52,9 +52,9 @@ INSERT INTO Adresse (rue, ville, numero, code_postal) VALUES
 ('Boulevard Saint-Germain', 'Paris', '156', '75006'),
 ('Cours Lafayette', 'Lyon', '34', '69006');
 
--------------------------
+-- -----------------------
 -- 2. INSERT Cinéma
--------------------------
+-- -----------------------
 INSERT INTO Cinema (nom, note, id_adresse) VALUES
 ('Cinéma Lumière', 4.5, 1),
 ('Grand Écran Lyon', 4.2, 2),
@@ -65,9 +65,9 @@ INSERT INTO Cinema (nom, note, id_adresse) VALUES
 ('UGC Odéon', 4.6, 7),
 ('Pathé Bellecour', 4.4, 8);
 
--------------------------
+-- -----------------------
 -- 3. INSERT Films
--------------------------
+-- -----------------------
 INSERT INTO Film (titre, duree, langue, sous_titres, age_min, synopsis) VALUES
 ('Inception', 148, 'Anglais', 'Français', 12, 'Un voleur introduit dans les rêves pour voler des secrets.'),
 ('Interstellar', 169, 'Anglais', 'Français', 10, 'Une équipe voyage à travers un trou noir pour sauver les humains.'),
@@ -80,9 +80,9 @@ INSERT INTO Film (titre, duree, langue, sous_titres, age_min, synopsis) VALUES
 ('Parasite', 132, 'Coréen', 'Français', 12, 'Une famille pauvre s''infiltre dans une famille riche avec des conséquences dramatiques.'),
 ('La La Land', 128, 'Anglais', 'Français', 0, 'Une histoire d''amour entre un musicien de jazz et une actrice en herbe à Los Angeles.');
 
--------------------------
+-- -----------------------
 -- 4. INSERT Acteurs
--------------------------
+-- -----------------------
 INSERT INTO Acteur (nom) VALUES
 ('Leonardo DiCaprio'),
 ('Matthew McConaughey'),
@@ -104,9 +104,9 @@ INSERT INTO Acteur (nom) VALUES
 ('Ryan Gosling'),
 ('Emma Stone');
 
--------------------------
+-- -----------------------
 -- 5. INSERT Réalisateurs
--------------------------
+-- -----------------------
 INSERT INTO Realisateur (nom) VALUES
 ('Christopher Nolan'),
 ('Jean-Pierre Jeunet'),
@@ -118,9 +118,9 @@ INSERT INTO Realisateur (nom) VALUES
 ('Bong Joon-ho'),
 ('Damien Chazelle');
 
--------------------------
+-- -----------------------
 -- 6. INSERT Programmation
--------------------------
+-- -----------------------
 INSERT INTO Programmation (date_debut, date_fin) VALUES
 ('2025-02-01', '2025-02-15'),
 ('2025-03-01', '2025-03-20'),
@@ -128,9 +128,9 @@ INSERT INTO Programmation (date_debut, date_fin) VALUES
 ('2025-05-15', '2025-06-15'),
 ('2025-07-01', '2025-07-31');
 
--------------------------
+-- -----------------------
 -- 7. INSERT Séances
--------------------------
+-- -----------------------
 INSERT INTO Seance (jour_semaine, heure_debut, id_programmation) VALUES
 -- Programmation 1 (Février)
 ('Lundi', '14:00:00', 1),
@@ -167,9 +167,9 @@ INSERT INTO Seance (jour_semaine, heure_debut, id_programmation) VALUES
 ('Samedi', '16:30:00', 5),
 ('Dimanche', '20:00:00', 5);
 
--------------------------
+-- -----------------------
 -- 8. INSERT Projeter : Cinéma ↔ Programmation (N-N)
--------------------------
+-- -----------------------
 INSERT INTO Projeter (id_cinema, id_programmation) VALUES
 -- Cinéma Lumière (Paris)
 (1, 1), (1, 2), (1, 4),
@@ -188,9 +188,9 @@ INSERT INTO Projeter (id_cinema, id_programmation) VALUES
 -- Pathé Bellecour (Lyon)
 (8, 1), (8, 3), (8, 5);
 
--------------------------
+-- -----------------------
 -- 9. INSERT Programmer : Programmation ↔ Film (N-N)
--------------------------
+-- -----------------------
 INSERT INTO Programmer (id_programmation, id_film) VALUES
 -- Programmation 1 (Février)
 (1, 1), -- Inception
@@ -217,9 +217,9 @@ INSERT INTO Programmer (id_programmation, id_film) VALUES
 (5, 5), -- The Matrix (reprise)
 (5, 2); -- Interstellar (reprise)
 
--------------------------
+-- -----------------------
 -- 10. INSERT Jouer : Film ↔ Acteur
--------------------------
+-- -----------------------
 INSERT INTO Jouer (id_film, id_acteur) VALUES
 -- Inception
 (1, 1), -- Leonardo DiCaprio
@@ -261,9 +261,9 @@ INSERT INTO Jouer (id_film, id_acteur) VALUES
 (10, 18), -- Ryan Gosling
 (10, 19); -- Emma Stone
 
--------------------------
+-- -----------------------
 -- 11. INSERT Realiser : Film ↔ Réalisateur
--------------------------
+-- -----------------------
 INSERT INTO Realiser (id_film, id_realisateur) VALUES
 (1, 1), -- Inception → Christopher Nolan
 (2, 1), -- Interstellar → Christopher Nolan
