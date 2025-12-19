@@ -7,6 +7,7 @@ https://dev.mysql.com/doc/mysql-getting-started/en/#mysql-getting-started-instal
 
 2. Create the database
 run the inialization script with the following command : 
+
 -windows: `%windir%\system32\cmd.exe < ./init_prj.sh`
 -unix: `./init_prj.sh`
 
