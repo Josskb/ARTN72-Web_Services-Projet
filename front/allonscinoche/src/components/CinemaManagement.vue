@@ -96,7 +96,19 @@
     <!-- Liste des cinémas -->
     <div class="cinemas-list">
       <h3>Cinémas existants</h3>
-      <div v-if="cinemas.length === 0" class="no-cinemas">
+      
+      <!-- Message de chargement -->
+      <div v-if="loading" class="loading-message">
+        <p>⏳ Chargement des cinémas...</p>
+      </div>
+      
+      <!-- Message d'erreur -->
+      <div v-else-if="error" class="error-message">
+        <p>❌ {{ error }}</p>
+        <button @click="loadCinemas" class="btn-retry">🔄 Réessayer</button>
+      </div>
+      
+      <div v-else-if="cinemas.length === 0" class="no-cinemas">
         <p>Aucun cinéma enregistré pour le moment.</p>
         <p>Cliquez sur "Ajouter un cinéma" pour commencer !</p>
       </div>
@@ -129,10 +141,13 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { cinemasAPI } from '../services/api.js'
 
 const showAddForm = ref(false)
 const cinemas = ref([])
+const loading = ref(false)
+const error = ref(null)
 
 const newCinema = reactive({
   nom: '',
@@ -145,15 +160,55 @@ const newCinema = reactive({
   }
 })
 
-const addCinema = () => {
-  const cinema = {
-    id: Date.now(),
-    ...newCinema
+// Charger les cinémas au montage du composant
+onMounted(async () => {
+  await loadCinemas()
+})
+
+const loadCinemas = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const response = await cinemasAPI.getAll()
+    cinemas.value = response.cinemas || []
+  } catch (err) {
+    error.value = 'Erreur lors du chargement des cinémas: ' + err.message
+    console.error(err)
+  } finally {
+    loading.value = false
   }
-  cinemas.value.push(cinema)
-  resetForm()
-  showAddForm.value = false
-  alert('Cinéma ajouté avec succès !')
+}
+
+const addCinema = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const cinemaData = {
+      nom: newCinema.nom,
+      note: newCinema.note ? parseFloat(newCinema.note) : null,
+      adresse: {
+        numero: newCinema.adresse.numero,
+        rue: newCinema.adresse.rue,
+        ville: newCinema.adresse.ville,
+        code_postal: newCinema.adresse.code_postal
+      }
+    }
+    
+    await cinemasAPI.create(cinemaData)
+    
+    // Recharger la liste des cinémas
+    await loadCinemas()
+    
+    resetForm()
+    showAddForm.value = false
+    alert('Cinéma ajouté avec succès !')
+  } catch (err) {
+    error.value = 'Erreur lors de l\'ajout du cinéma: ' + err.message
+    alert('Erreur: ' + err.message)
+  } finally {
+    loading.value = false
+  }
 }
 
 const resetForm = () => {
@@ -169,14 +224,24 @@ const editCinema = (cinema) => {
   alert(`Édition du cinéma "${cinema.nom}" - Fonctionnalité à implémenter`)
 }
 
-const deleteCinema = (cinemaId) => {
+const deleteCinema = async (cinemaId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce cinéma ?')) {
-    cinemas.value = cinemas.value.filter(c => c.id !== cinemaId)
-    alert('Cinéma supprimé avec succès !')
+    try {
+      loading.value = true
+      await cinemasAPI.delete(cinemaId)
+      await loadCinemas()
+      alert('Cinéma supprimé avec succès !')
+    } catch (err) {
+      error.value = 'Erreur lors de la suppression: ' + err.message
+      alert('Erreur: ' + err.message)
+    } finally {
+      loading.value = false
+    }
   }
 }
 
 const formatAddress = (adresse) => {
+  if (!adresse) return ''
   const parts = []
   if (adresse.numero) parts.push(adresse.numero)
   if (adresse.rue) parts.push(adresse.rue)
@@ -432,6 +497,36 @@ const formatAddress = (adresse) => {
   margin: 0;
   color: #4a5568;
   line-height: 1.5;
+}
+
+.loading-message,
+.error-message {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+}
+
+.loading-message {
+  color: #4299e1;
+}
+
+.error-message {
+  color: #e53e3e;
+}
+
+.btn-retry {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-retry:hover {
+  background-color: #3182ce;
 }
 
 @media (max-width: 768px) {

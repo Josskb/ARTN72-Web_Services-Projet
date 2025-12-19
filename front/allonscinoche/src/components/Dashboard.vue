@@ -2,80 +2,81 @@
   <div class="dashboard">
     <h2 class="page-title">📊 Tableau de bord - AllonsCinoche</h2>
     
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">🎬</div>
-        <div class="stat-content">
-          <h3>Films actifs</h3>
-          <p class="stat-number">24</p>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon">🏢</div>
-        <div class="stat-content">
-          <h3>Cinémas partenaires</h3>
-          <p class="stat-number">8</p>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon">📅</div>
-        <div class="stat-content">
-          <h3>Séances programmées</h3>
-          <p class="stat-number">156</p>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-content">
-          <h3>Note moyenne</h3>
-          <p class="stat-number">4.2</p>
-        </div>
-      </div>
+    <!-- Message de chargement -->
+    <div v-if="loading" class="loading-message">
+      <p>⏳ Chargement des statistiques...</p>
     </div>
     
-    <div class="quick-actions">
-      <h3>Actions rapides</h3>
-      <div class="actions-grid">
-        <button class="action-button primary">
-          <span class="action-icon">➕</span>
-          Ajouter un nouveau film
-        </button>
-        <button class="action-button secondary">
-          <span class="action-icon">📝</span>
-          Créer une programmation
-        </button>
-        <button class="action-button tertiary">
-          <span class="action-icon">📊</span>
-          Voir les statistiques
-        </button>
+    <div v-else>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🎬</div>
+          <div class="stat-content">
+            <h3>Films actifs</h3>
+            <p class="stat-number">{{ stats.totalFilms }}</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">🏢</div>
+          <div class="stat-content">
+            <h3>Cinémas partenaires</h3>
+            <p class="stat-number">{{ stats.totalCinemas }}</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-content">
+            <h3>Séances programmées</h3>
+            <p class="stat-number">{{ stats.totalProgrammations }}</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">🎭</div>
+          <div class="stat-content">
+            <h3>Films récents</h3>
+            <p class="stat-number">{{ stats.recentFilms }}</p>
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <div class="recent-activity">
-      <h3>Activité récente</h3>
-      <div class="activity-list">
-        <div class="activity-item">
-          <div class="activity-icon">🎬</div>
-          <div class="activity-content">
-            <p><strong>Nouveau film ajouté:</strong> "Inception"</p>
-            <span class="activity-time">Il y a 2 heures</span>
-          </div>
+      
+      <div class="quick-actions">
+        <h3>Actions rapides</h3>
+        <div class="actions-grid">
+          <button class="action-button primary" @click="$emit('change-view', 'films')">
+            <span class="action-icon">➕</span>
+            Ajouter un nouveau film
+          </button>
+          <button class="action-button secondary" @click="$emit('change-view', 'programmations')">
+            <span class="action-icon">📝</span>
+            Créer une programmation
+          </button>
+          <button class="action-button tertiary" @click="$emit('change-view', 'cinemas')">
+            <span class="action-icon">🏢</span>
+            Gérer les cinémas
+          </button>
         </div>
-        <div class="activity-item">
-          <div class="activity-icon">📅</div>
-          <div class="activity-content">
-            <p><strong>Programmation mise à jour:</strong> Cinéma Lumière</p>
-            <span class="activity-time">Il y a 4 heures</span>
-          </div>
+      </div>
+      
+      <div class="recent-activity">
+        <h3>Films récents</h3>
+        <div v-if="recentFilms.length === 0" class="no-activity">
+          <p>Aucun film ajouté pour le moment</p>
         </div>
-        <div class="activity-item">
-          <div class="activity-icon">🏢</div>
-          <div class="activity-content">
-            <p><strong>Nouveau cinéma partenaire:</strong> UGC Odéon</p>
-            <span class="activity-time">Hier</span>
+        <div v-else class="activity-list">
+          <div v-for="film in recentFilms" :key="film.id" class="activity-item">
+            <div class="activity-icon">🎬</div>
+            <div class="activity-content">
+              <p><strong>{{ film.titre }}</strong></p>
+              <span class="activity-details">
+                {{ film.realisateur }} • {{ film.duree }}
+                <span v-if="film.dateCreation" class="activity-time">
+                  • Ajouté {{ formatDate(film.dateCreation) }}
+                </span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -84,7 +85,79 @@
 </template>
 
 <script setup>
-// Composant Dashboard
+import { ref, onMounted, computed } from 'vue'
+import { filmsAPI, cinemasAPI, programmationsAPI } from '../services/api.js'
+
+// Émettre l'événement pour changer de vue
+const emit = defineEmits(['change-view'])
+
+const loading = ref(true)
+const films = ref([])
+const cinemas = ref([])
+const programmations = ref([])
+
+const stats = computed(() => ({
+  totalFilms: films.value.length,
+  totalCinemas: cinemas.value.length,
+  totalProgrammations: programmations.value.length,
+  recentFilms: films.value.filter(f => {
+    if (!f.dateCreation) return false
+    const filmDate = new Date(f.dateCreation)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    return filmDate > weekAgo
+  }).length
+}))
+
+const recentFilms = computed(() => {
+  return films.value
+    .sort((a, b) => {
+      const dateA = new Date(a.dateCreation || 0)
+      const dateB = new Date(b.dateCreation || 0)
+      return dateB - dateA
+    })
+    .slice(0, 5)
+})
+
+const loadData = async () => {
+  try {
+    loading.value = true
+    const [filmsResponse, cinemasResponse, programmationsResponse] = await Promise.all([
+      filmsAPI.getAll(),
+      cinemasAPI.getAll(),
+      programmationsAPI.getAll()
+    ])
+    films.value = filmsResponse.films || []
+    cinemas.value = cinemasResponse.cinemas || []
+    programmations.value = programmationsResponse.programmations || []
+  } catch (error) {
+    console.error('Erreur lors du chargement des données:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return 'à l\'instant'
+  if (diffMins < 60) return `il y a ${diffMins} min`
+  if (diffHours < 24) return `il y a ${diffHours}h`
+  if (diffDays < 7) return `il y a ${diffDays}j`
+  
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <style scoped>
@@ -304,10 +377,30 @@
   font-weight: 500;
 }
 
+.activity-details {
+  font-size: 0.85rem;
+  color: #718096;
+  font-weight: 400;
+}
+
 .activity-time {
   font-size: 0.85rem;
   color: #718096;
   font-weight: 400;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: #4299e1;
+}
+
+.no-activity {
+  text-align: center;
+  padding: 2rem;
+  color: #718096;
+  font-style: italic;
 }
 
 /* Responsive design optimisé */

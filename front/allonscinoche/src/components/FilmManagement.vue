@@ -116,7 +116,19 @@
     <!-- Liste des films -->
     <div class="films-list">
       <h3>Films existants</h3>
-      <div v-if="films.length === 0" class="no-films">
+      
+      <!-- Message de chargement -->
+      <div v-if="loading" class="loading-message">
+        <p>⏳ Chargement des films...</p>
+      </div>
+      
+      <!-- Message d'erreur -->
+      <div v-else-if="error" class="error-message">
+        <p>❌ {{ error }}</p>
+        <button @click="loadFilms" class="btn-retry">🔄 Réessayer</button>
+      </div>
+      
+      <div v-else-if="films.length === 0" class="no-films">
         <p>Aucun film enregistré pour le moment.</p>
         <p>Cliquez sur "Ajouter un film" pour commencer !</p>
       </div>
@@ -130,14 +142,13 @@
             </div>
           </div>
           <div class="film-details">
-            <p><strong>Durée:</strong> {{ film.duree }} min</p>
-            <p><strong>Langue:</strong> {{ film.langue }}</p>
-            <p><strong>Sous-titres:</strong> {{ film.sous_titres }}</p>
-            <p><strong>Âge minimum:</strong> {{ film.age_min }} ans</p>
-            <p><strong>Réalisateur(s):</strong> {{ film.realisateurs }}</p>
-            <p><strong>Acteurs:</strong> {{ film.acteurs }}</p>
+            <p><strong>Durée:</strong> {{ film.duree }}</p>
+            <p><strong>Réalisateur:</strong> {{ film.realisateur }}</p>
+            <p><strong>Genre:</strong> {{ film.genre }}</p>
+            <p><strong>Classification:</strong> {{ film.classification }}</p>
+            <p v-if="film.acteurs && film.acteurs.length"><strong>Acteurs:</strong> {{ film.acteurs.join(', ') }}</p>
           </div>
-          <div class="film-synopsis">
+          <div class="film-synopsis" v-if="film.synopsis">
             <strong>Synopsis:</strong>
             <p>{{ film.synopsis }}</p>
           </div>
@@ -148,10 +159,13 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { filmsAPI } from '../services/api.js'
 
 const showAddForm = ref(false)
 const films = ref([])
+const loading = ref(false)
+const error = ref(null)
 
 const newFilm = reactive({
   titre: '',
@@ -164,15 +178,56 @@ const newFilm = reactive({
   synopsis: ''
 })
 
-const addFilm = () => {
-  const film = {
-    id: Date.now(),
-    ...newFilm
+// Charger les films au montage du composant
+onMounted(async () => {
+  await loadFilms()
+})
+
+const loadFilms = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const response = await filmsAPI.getAll()
+    films.value = response.films || []
+  } catch (err) {
+    error.value = 'Erreur lors du chargement des films: ' + err.message
+    console.error(err)
+  } finally {
+    loading.value = false
   }
-  films.value.push(film)
-  resetForm()
-  showAddForm.value = false
-  alert('Film ajouté avec succès !')
+}
+
+const addFilm = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    // Préparer les données pour l'API
+    const filmData = {
+      titre: newFilm.titre,
+      realisateur: newFilm.realisateurs, // L'API attend 'realisateur'
+      genre: newFilm.langue, // Adapter selon votre structure
+      duree: newFilm.duree + 'min',
+      synopsis: newFilm.synopsis,
+      acteurs: newFilm.acteurs.split(',').map(a => a.trim()),
+      classification: newFilm.age_min + '+',
+      dateSortie: new Date().toISOString().split('T')[0]
+    }
+    
+    const nouveauFilm = await filmsAPI.create(filmData)
+    
+    // Recharger la liste des films
+    await loadFilms()
+    
+    resetForm()
+    showAddForm.value = false
+    alert('Film ajouté avec succès !')
+  } catch (err) {
+    error.value = 'Erreur lors de l\'ajout du film: ' + err.message
+    alert('Erreur: ' + err.message)
+  } finally {
+    loading.value = false
+  }
 }
 
 const resetForm = () => {
@@ -191,10 +246,19 @@ const editFilm = (film) => {
   alert(`Édition du film "${film.titre}" - Fonctionnalité à implémenter`)
 }
 
-const deleteFilm = (filmId) => {
+const deleteFilm = async (filmId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce film ?')) {
-    films.value = films.value.filter(f => f.id !== filmId)
-    alert('Film supprimé avec succès !')
+    try {
+      loading.value = true
+      await filmsAPI.delete(filmId)
+      await loadFilms()
+      alert('Film supprimé avec succès !')
+    } catch (err) {
+      error.value = 'Erreur lors de la suppression: ' + err.message
+      alert('Erreur: ' + err.message)
+    } finally {
+      loading.value = false
+    }
   }
 }
 </script>
@@ -428,6 +492,36 @@ const deleteFilm = (filmId) => {
   margin: 0.5rem 0 0 0;
   color: #4a5568;
   line-height: 1.5;
+}
+
+.loading-message,
+.error-message {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+}
+
+.loading-message {
+  color: #4299e1;
+}
+
+.error-message {
+  color: #e53e3e;
+}
+
+.btn-retry {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-retry:hover {
+  background-color: #3182ce;
 }
 
 @media (max-width: 768px) {

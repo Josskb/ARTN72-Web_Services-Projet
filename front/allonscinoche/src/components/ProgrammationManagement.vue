@@ -1,5 +1,8 @@
 <template>
   <div class="programmation-management">
+    <div v-if="error" class="error-message">⚠️ {{ error }}</div>
+    <div v-if="loading" class="loading">Chargement...</div>
+    
     <div class="page-header">
       <h2 class="page-title">📅 Gestion des Programmations</h2>
       <button @click="showAddForm = !showAddForm" class="btn-primary">
@@ -173,23 +176,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { filmsAPI, cinemasAPI, programmationsAPI } from '../services/api'
 
 const showAddForm = ref(false)
 const programmations = ref([])
-
-// Données factices pour les films et cinémas disponibles
-const availableFilms = ref([
-  { id: 1, titre: 'Inception', duree: 148 },
-  { id: 2, titre: 'Interstellar', duree: 169 },
-  { id: 3, titre: 'Amélie Poulain', duree: 122 }
-])
-
-const availableCinemas = ref([
-  { id: 1, nom: 'Cinéma Lumière', ville: 'Paris' },
-  { id: 2, nom: 'Grand Écran Lyon', ville: 'Lyon' },
-  { id: 3, nom: 'UGC Odéon', ville: 'Paris' }
-])
+const availableFilms = ref([])
+const availableCinemas = ref([])
+const loading = ref(false)
+const error = ref('')
 
 const today = computed(() => {
   return new Date().toISOString().split('T')[0]
@@ -208,6 +203,50 @@ const newProgrammation = reactive({
   ]
 })
 
+// Charger les programmations depuis la base de données
+const loadProgrammations = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    const data = await programmationsAPI.getAll()
+    programmations.value = data.programmations || []
+  } catch (err) {
+    error.value = 'Erreur lors du chargement des programmations: ' + err.message
+    console.error('Erreur chargement programmations:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Charger les films depuis la base de données
+const loadFilms = async () => {
+  try {
+    const data = await filmsAPI.getAll()
+    availableFilms.value = data.films || []
+  } catch (err) {
+    console.error('Erreur chargement films:', err)
+  }
+}
+
+// Charger les cinémas depuis la base de données
+const loadCinemas = async () => {
+  try {
+    const data = await cinemasAPI.getAll()
+    availableCinemas.value = data.cinemas || []
+  } catch (err) {
+    console.error('Erreur chargement cinémas:', err)
+  }
+}
+
+// Charger toutes les données au montage du composant
+onMounted(async () => {
+  await Promise.all([
+    loadProgrammations(),
+    loadFilms(),
+    loadCinemas()
+  ])
+})
+
 const addSeance = () => {
   if (newProgrammation.seances.length < 3) {
     newProgrammation.seances.push({
@@ -223,26 +262,39 @@ const removeSeance = (index) => {
   }
 }
 
-const addProgrammation = () => {
+const addProgrammation = async () => {
   // Validation
   if (newProgrammation.seances.length === 0) {
     alert('Vous devez configurer au moins une séance.')
     return
   }
 
-  const programmation = {
-    id: Date.now(),
-    ...newProgrammation,
-    seances: newProgrammation.seances.map((seance, index) => ({
-      ...seance,
-      id: Date.now() + index
-    }))
+  try {
+    loading.value = true
+    error.value = ''
+    
+    // Créer la programmation dans la base de données
+    await programmationsAPI.create({
+      film_id: parseInt(newProgrammation.film_id),
+      cinema_id: parseInt(newProgrammation.cinema_id),
+      date_debut: newProgrammation.date_debut,
+      date_fin: newProgrammation.date_fin,
+      seances: newProgrammation.seances
+    })
+    
+    // Recharger les programmations
+    await loadProgrammations()
+    
+    resetForm()
+    showAddForm.value = false
+    alert('Programmation créée avec succès !')
+  } catch (err) {
+    error.value = 'Erreur lors de la création de la programmation: ' + err.message
+    console.error('Erreur création programmation:', err)
+    alert('Erreur lors de la création de la programmation. Vérifiez la console.')
+  } finally {
+    loading.value = false
   }
-  
-  programmations.value.push(programmation)
-  resetForm()
-  showAddForm.value = false
-  alert('Programmation créée avec succès !')
 }
 
 const resetForm = () => {
@@ -262,10 +314,21 @@ const editProgrammation = (programmation) => {
   alert(`Édition de la programmation - Fonctionnalité à implémenter`)
 }
 
-const deleteProgrammation = (programmationId) => {
+const deleteProgrammation = async (programmationId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer cette programmation ?')) {
-    programmations.value = programmations.value.filter(p => p.id !== programmationId)
-    alert('Programmation supprimée avec succès !')
+    try {
+      loading.value = true
+      error.value = ''
+      await programmationsAPI.delete(programmationId)
+      await loadProgrammations()
+      alert('Programmation supprimée avec succès !')
+    } catch (err) {
+      error.value = 'Erreur lors de la suppression de la programmation: ' + err.message
+      console.error('Erreur suppression programmation:', err)
+      alert('Erreur lors de la suppression. Vérifiez la console.')
+    } finally {
+      loading.value = false
+    }
   }
 }
 

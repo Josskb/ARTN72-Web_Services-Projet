@@ -20,7 +20,7 @@ const setView = (view) => {
     <div class="main-container">
       <Navigation :current-view="currentView" @change-view="setView" />
       <main class="content">
-        <Dashboard v-if="currentView === 'dashboard'" />
+        <Dashboard v-if="currentView === 'dashboard'" @change-view="setView" />
         <FilmManagement v-else-if="currentView === 'films'" />
         <CinemaManagement v-else-if="currentView === 'cinemas'" />
         <ProgrammationManagement v-else-if="currentView === 'programmations'" />
