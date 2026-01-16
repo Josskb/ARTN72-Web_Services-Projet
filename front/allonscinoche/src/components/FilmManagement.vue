@@ -2,9 +2,8 @@
   <div class="film-management">
     <div class="page-header">
       <h2 class="page-title">🎬 Gestion des Films</h2>
-      <button @click="showAddForm = !showAddForm" class="btn-primary">
-        <span v-if="!showAddForm">➕ Ajouter un film</span>
-        <span v-else">❌ Annuler</span>
+      <button @click="toggleAddForm" class="btn-primary">
+        {{ showAddForm ? '❌ Annuler' : '➕ Ajouter un film' }}
       </button>
     </div>
 
@@ -166,6 +165,9 @@ const showAddForm = ref(false)
 const films = ref([])
 const loading = ref(false)
 const error = ref(null)
+const isEditing = ref(false)
+const editingFilmId = ref(null)
+
 
 const newFilm = reactive({
   titre: '',
@@ -177,6 +179,18 @@ const newFilm = reactive({
   acteurs: '',
   synopsis: ''
 })
+
+const toggleAddForm = () => {
+  showAddForm.value = !showAddForm.value
+
+  // Si on ferme le formulaire => on reset tout proprement
+  if (!showAddForm.value) {
+    resetForm()
+    isEditing.value = false
+    editingFilmId.value = null
+  }
+}
+
 
 // Charger les films au montage du composant
 onMounted(async () => {
@@ -243,8 +257,43 @@ const resetForm = () => {
 }
 
 const editFilm = (film) => {
-  alert(`Édition du film "${film.titre}" - Fonctionnalité à implémenter`)
+  // Active le mode édition
+  isEditing.value = true
+  editingFilmId.value = film.id
+
+  // Ouvre le formulaire
+  showAddForm.value = true
+
+  // Pré-remplissage du formulaire avec les données du film
+  newFilm.titre = film.titre || ''
+
+  // Exemple: film.duree peut être "120min" => on récupère juste 120
+  const dureeNum = parseInt((film.duree || '').toString().replace(/\D/g, ''))
+  newFilm.duree = isNaN(dureeNum) ? '' : dureeNum
+
+  newFilm.langue = film.genre || '' // chez toi "langue" est utilisé comme "genre"
+  newFilm.realisateurs = film.realisateur || ''
+
+  // Acteurs : si c'est un tableau => join, sinon string direct
+  if (Array.isArray(film.acteurs)) {
+    newFilm.acteurs = film.acteurs.join(', ')
+  } else {
+    newFilm.acteurs = film.acteurs || ''
+  }
+
+  newFilm.synopsis = film.synopsis || ''
+
+  // Classification exemple "12+" => on récupère 12
+  const ageNum = parseInt((film.classification || '0').toString().replace(/\D/g, ''))
+  newFilm.age_min = isNaN(ageNum) ? 0 : ageNum
+
+  // Sous-titres : ton backend n’en renvoie pas, donc on met par défaut
+  newFilm.sous_titres = 'Aucun'
+
+  // Optionnel : remonter en haut de page pour voir le formulaire
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
 
 const deleteFilm = async (filmId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce film ?')) {
