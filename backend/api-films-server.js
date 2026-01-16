@@ -401,6 +401,73 @@ app.get('/api/films/:filmId', async (req, res) => {
   }
 });
 
+// 5.5. RÉCUPÉRER TOUS LES FILMS PROPOSÉS DANS UNE VILLE
+app.get('/api/villes/:villeNom/films', async (req, res) => {
+  try {
+    const villeNom = req.params.villeNom;
+
+    // Récupérer tous les films proposés dans les cinémas de la ville
+    const [films] = await db.query(`
+      SELECT DISTINCT
+        f.id_film as id,
+        f.titre,
+        f.duree,
+        f.langue,
+        f.sous_titres,
+        f.age_min,
+        f.synopsis,
+        GROUP_CONCAT(DISTINCT r.nom) as realisateur,
+        GROUP_CONCAT(DISTINCT a.nom) as acteurs,
+        GROUP_CONCAT(DISTINCT c.nom) as cinemas,
+        GROUP_CONCAT(DISTINCT a2.ville) as villes
+      FROM Film f
+      LEFT JOIN Realiser rel ON f.id_film = rel.id_film
+      LEFT JOIN Realisateur r ON rel.id_realisateur = r.id_realisateur
+      LEFT JOIN Jouer j ON f.id_film = j.id_film
+      LEFT JOIN Acteur a ON j.id_acteur = a.id_acteur
+      LEFT JOIN Programmer pr ON f.id_film = pr.id_film
+      LEFT JOIN Programmation p ON pr.id_programmation = p.id_programmation
+      LEFT JOIN Projeter pj ON p.id_programmation = pj.id_programmation
+      LEFT JOIN Cinema c ON pj.id_cinema = c.id_cinema
+      LEFT JOIN Adresse a2 ON c.id_adresse = a2.id_adresse
+      WHERE a2.ville = ?
+      GROUP BY f.id_film
+      ORDER BY f.titre
+    `, [villeNom]);
+
+    if (films.length === 0) {
+      return res.json({
+        message: `Aucun film proposé dans la ville de ${villeNom}`,
+        films: [],
+        total: 0,
+        ville: villeNom
+      });
+    }
+
+    const resultats = films.map(film => ({
+      id: film.id,
+      titre: film.titre,
+      realisateur: film.realisateur || '',
+      genre: film.langue || '',
+      duree: film.duree ? film.duree + 'min' : '',
+      synopsis: film.synopsis || '',
+      classification: film.age_min + '+',
+      acteurs: film.acteurs ? film.acteurs.split(',').map(a => a.trim()) : [],
+      cinemas: film.cinemas ? film.cinemas.split(',').map(c => c.trim()) : [],
+      statut: 'actif'
+    }));
+
+    res.json({
+      ville: villeNom,
+      films: resultats,
+      total: resultats.length
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des films par ville:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des films par ville' });
+  }
+});
+
 // 6. RÉCUPÉRER LES PROGRAMMATIONS D'UN FILM
 app.get('/api/films/:filmId/programmations', (req, res) => {
   try {

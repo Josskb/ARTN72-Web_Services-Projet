@@ -6,6 +6,7 @@ import FilmManagement from './components/FilmManagement.vue'
 import CinemaManagement from './components/CinemaManagement.vue'
 import ProgrammationManagement from './components/ProgrammationManagement.vue'
 import Dashboard from './components/Dashboard.vue'
+import FilmsByCity from './components/FilmsByCity.vue'
 
 const currentView = ref('dashboard')
 
@@ -24,6 +25,7 @@ const setView = (view) => {
         <FilmManagement v-else-if="currentView === 'films'" />
         <CinemaManagement v-else-if="currentView === 'cinemas'" />
         <ProgrammationManagement v-else-if="currentView === 'programmations'" />
+        <FilmsByCity v-else-if="currentView === 'films-by-city'" />
       </main>
     </div>
   </div>

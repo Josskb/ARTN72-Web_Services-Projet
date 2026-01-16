@@ -37,6 +37,15 @@
           📅 Programmations
         </button>
       </li>
+      <li class="nav-item">
+        <button 
+          @click="$emit('change-view', 'films-by-city')"
+          :class="{ active: currentView === 'films-by-city' }"
+          class="nav-button"
+        >
+          🔍 Films par Ville
+        </button>
+      </li>
     </ul>
   </nav>
 </template>

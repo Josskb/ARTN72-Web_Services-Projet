@@ -125,8 +125,15 @@ export const cinemasAPI = {
   })
 };
 
+// API Films par ville
+export const filmsByCity = {
+  // Récupérer tous les films dans une ville
+  getByCity: (villeNom) => fetchAPI(`/villes/${encodeURIComponent(villeNom)}/films`)
+};
+
 export default {
   films: filmsAPI,
   programmations: programmationsAPI,
-  cinemas: cinemasAPI
+  cinemas: cinemasAPI,
+  filmsByCity: filmsByCity
 };
