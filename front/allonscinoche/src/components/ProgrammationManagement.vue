@@ -185,6 +185,8 @@ const availableFilms = ref([])
 const availableCinemas = ref([])
 const loading = ref(false)
 const error = ref('')
+const isEditing = ref(false)
+const editingProgrammationId = ref(null)
 
 const today = computed(() => {
   return new Date().toISOString().split('T')[0]
@@ -263,39 +265,79 @@ const removeSeance = (index) => {
 }
 
 const addProgrammation = async () => {
-  // Validation
-  if (newProgrammation.seances.length === 0) {
-    alert('Vous devez configurer au moins une séance.')
-    return
-  }
-
   try {
     loading.value = true
     error.value = ''
-    
-    // Créer la programmation dans la base de données
-    await programmationsAPI.create({
-      film_id: parseInt(newProgrammation.film_id),
-      cinema_id: parseInt(newProgrammation.cinema_id),
+
+    // ✅ Beaucoup de backends imposent EXACTEMENT 3 séances (vu ton UI)
+    if (newProgrammation.seances.length !== 3) {
+      alert("Tu dois configurer exactement 3 séances (3 jours par semaine).")
+      return
+    }
+
+    // ✅ Vérif champs
+    for (const s of newProgrammation.seances) {
+      if (!s.jour_semaine || !s.heure_debut) {
+        alert("Chaque séance doit avoir un jour + une heure.")
+        return
+      }
+    }
+
+    // ✅ anti doublons de jours
+    const jours = newProgrammation.seances.map(s => s.jour_semaine)
+    if (new Set(jours).size !== jours.length) {
+      alert("Tu ne peux pas mettre deux fois le même jour.")
+      return
+    }
+
+    // ✅ Normalise l’heure => "18:30" devient "18:30:00"
+    const normalizeTime = (t) => (t && t.length === 5 ? `${t}:00` : t)
+
+    const payload = {
+      film_id: Number(newProgrammation.film_id),
+      cinema_id: Number(newProgrammation.cinema_id),
       date_debut: newProgrammation.date_debut,
       date_fin: newProgrammation.date_fin,
-      seances: newProgrammation.seances
-    })
-    
-    // Recharger les programmations
+      seances: newProgrammation.seances.map(s => ({
+        jour_semaine: s.jour_semaine,
+        heure_debut: normalizeTime(s.heure_debut)
+      }))
+    }
+
+    console.log("📤 Payload programmation envoyé :", payload)
+
+    // ✅ UPDATE ou CREATE
+    if (isEditing.value && editingProgrammationId.value) {
+      await programmationsAPI.update(editingProgrammationId.value, payload)
+      alert("Programmation modifiée avec succès !")
+    } else {
+      await programmationsAPI.create(payload)
+      alert("Programmation créée avec succès !")
+    }
+
     await loadProgrammations()
-    
+
     resetForm()
     showAddForm.value = false
-    alert('Programmation créée avec succès !')
+    isEditing.value = false
+    editingProgrammationId.value = null
   } catch (err) {
-    error.value = 'Erreur lors de la création de la programmation: ' + err.message
-    console.error('Erreur création programmation:', err)
-    alert('Erreur lors de la création de la programmation. Vérifiez la console.')
+    // ✅ On affiche la VRAIE erreur backend si axios la renvoie
+    const backendMsg =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      JSON.stringify(err?.response?.data || "")
+
+    console.error("❌ Erreur backend programmation :", err?.response || err)
+
+    error.value = `Erreur lors de l’enregistrement : ${backendMsg || err.message}`
+    alert(error.value)
   } finally {
     loading.value = false
   }
 }
+
+
 
 const resetForm = () => {
   newProgrammation.film_id = ''
@@ -311,8 +353,30 @@ const resetForm = () => {
 }
 
 const editProgrammation = (programmation) => {
-  alert(`Édition de la programmation - Fonctionnalité à implémenter`)
+  isEditing.value = true
+  editingProgrammationId.value = programmation.id
+  showAddForm.value = true
+
+  newProgrammation.film_id = programmation.film_id
+  newProgrammation.cinema_id = programmation.cinema_id
+  newProgrammation.date_debut = (programmation.date_debut || '').slice(0, 10)
+  newProgrammation.date_fin = (programmation.date_fin || '').slice(0, 10)
+
+  // Pré-remplir les séances
+  if (programmation.seances && programmation.seances.length) {
+    newProgrammation.seances = programmation.seances.map(s => ({
+      jour_semaine: s.jour_semaine || '',
+      // "18:30:00" -> "18:30"
+      heure_debut: (s.heure_debut || '').slice(0, 5)
+    }))
+  } else {
+    newProgrammation.seances = [{ jour_semaine: '', heure_debut: '' }]
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+
 
 const deleteProgrammation = async (programmationId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer cette programmation ?')) {

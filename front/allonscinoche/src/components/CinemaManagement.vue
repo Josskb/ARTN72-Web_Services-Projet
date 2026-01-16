@@ -148,6 +148,9 @@ const showAddForm = ref(false)
 const cinemas = ref([])
 const loading = ref(false)
 const error = ref(null)
+const isEditing = ref(false)
+const editingCinemaId = ref(null)
+
 
 const newCinema = reactive({
   nom: '',
@@ -183,10 +186,10 @@ const addCinema = async () => {
   try {
     loading.value = true
     error.value = null
-    
+
     const cinemaData = {
       nom: newCinema.nom,
-      note: newCinema.note ? parseFloat(newCinema.note) : null,
+      note: newCinema.note !== '' ? parseFloat(newCinema.note) : null,
       adresse: {
         numero: newCinema.adresse.numero,
         rue: newCinema.adresse.rue,
@@ -194,22 +197,32 @@ const addCinema = async () => {
         code_postal: newCinema.adresse.code_postal
       }
     }
-    
-    await cinemasAPI.create(cinemaData)
-    
-    // Recharger la liste des cinémas
+
+    // ✅ UPDATE si on est en édition
+    if (isEditing.value && editingCinemaId.value) {
+      await cinemasAPI.update(editingCinemaId.value, cinemaData)
+      alert('Cinéma modifié avec succès !')
+    } 
+    // ✅ CREATE sinon
+    else {
+      await cinemasAPI.create(cinemaData)
+      alert('Cinéma ajouté avec succès !')
+    }
+
     await loadCinemas()
-    
+
     resetForm()
     showAddForm.value = false
-    alert('Cinéma ajouté avec succès !')
+    isEditing.value = false
+    editingCinemaId.value = null
   } catch (err) {
-    error.value = 'Erreur lors de l\'ajout du cinéma: ' + err.message
+    error.value = "Erreur lors de l'enregistrement du cinéma: " + err.message
     alert('Erreur: ' + err.message)
   } finally {
     loading.value = false
   }
 }
+
 
 const resetForm = () => {
   newCinema.nom = ''
@@ -221,8 +234,26 @@ const resetForm = () => {
 }
 
 const editCinema = (cinema) => {
-  alert(`Édition du cinéma "${cinema.nom}" - Fonctionnalité à implémenter`)
+  // Active le mode édition
+  isEditing.value = true
+  editingCinemaId.value = cinema.id
+
+  // Ouvre le formulaire
+  showAddForm.value = true
+
+  // Pré-remplissage des champs
+  newCinema.nom = cinema.nom || ''
+  newCinema.note = cinema.note !== null && cinema.note !== undefined ? cinema.note : ''
+
+  newCinema.adresse.numero = cinema.adresse?.numero || ''
+  newCinema.adresse.rue = cinema.adresse?.rue || ''
+  newCinema.adresse.ville = cinema.adresse?.ville || ''
+  newCinema.adresse.code_postal = cinema.adresse?.code_postal || ''
+
+  // Optionnel : remonter en haut pour voir direct le formulaire
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
 
 const deleteCinema = async (cinemaId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce cinéma ?')) {

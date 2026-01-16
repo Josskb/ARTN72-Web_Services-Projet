@@ -240,6 +240,116 @@ app.post('/api/films/:filmId/programmations', authenticateToken, async (req, res
   }
 });
 
+// 15bis. MODIFIER UNE PROGRAMMATION COMPLÈTE
+app.put('/api/programmations/:programmationId', authenticateToken, async (req, res) => {
+  try {
+    const programmationId = parseInt(req.params.programmationId);
+    const { film_id, cinema_id, date_debut, date_fin, seances } = req.body;
+
+    // Validation
+    if (!film_id || !cinema_id || !date_debut || !date_fin) {
+      return res.status(400).json({
+        error: 'Les champs film_id, cinema_id, date_debut et date_fin sont obligatoires'
+      });
+    }
+
+    // Vérifier que la programmation existe
+    const [existProg] = await db.query(
+      'SELECT * FROM Programmation WHERE id_programmation = ?',
+      [programmationId]
+    );
+    if (existProg.length === 0) {
+      return res.status(404).json({ error: 'Programmation non trouvée' });
+    }
+
+    // Vérifier film
+    const [films] = await db.query('SELECT * FROM Film WHERE id_film = ?', [film_id]);
+    if (films.length === 0) {
+      return res.status(404).json({ error: 'Film non trouvé' });
+    }
+
+    // Vérifier cinéma
+    const [cinemas] = await db.query('SELECT * FROM Cinema WHERE id_cinema = ?', [cinema_id]);
+    if (cinemas.length === 0) {
+      return res.status(404).json({ error: 'Cinéma non trouvé' });
+    }
+
+    // Update programmation (dates)
+    await db.query(
+      'UPDATE Programmation SET date_debut = ?, date_fin = ? WHERE id_programmation = ?',
+      [date_debut, date_fin, programmationId]
+    );
+
+    // Update relation film (Programmer)
+    const [progFilm] = await db.query(
+      'SELECT * FROM Programmer WHERE id_programmation = ?',
+      [programmationId]
+    );
+
+    if (progFilm.length > 0) {
+      await db.query(
+        'UPDATE Programmer SET id_film = ? WHERE id_programmation = ?',
+        [film_id, programmationId]
+      );
+    } else {
+      await db.query(
+        'INSERT INTO Programmer (id_programmation, id_film) VALUES (?, ?)',
+        [programmationId, film_id]
+      );
+    }
+
+    // Update relation cinéma (Projeter)
+    const [projCinema] = await db.query(
+      'SELECT * FROM Projeter WHERE id_programmation = ?',
+      [programmationId]
+    );
+
+    if (projCinema.length > 0) {
+      await db.query(
+        'UPDATE Projeter SET id_cinema = ? WHERE id_programmation = ?',
+        [cinema_id, programmationId]
+      );
+    } else {
+      await db.query(
+        'INSERT INTO Projeter (id_cinema, id_programmation) VALUES (?, ?)',
+        [cinema_id, programmationId]
+      );
+    }
+
+    // Remplacer les séances
+    await db.query('DELETE FROM Seance WHERE id_programmation = ?', [programmationId]);
+
+    const createdSeances = [];
+    if (seances && Array.isArray(seances)) {
+      for (const seance of seances) {
+        const [seanceResult] = await db.query(
+          'INSERT INTO Seance (jour_semaine, heure_debut, id_programmation) VALUES (?, ?, ?)',
+          [seance.jour_semaine, seance.heure_debut, programmationId]
+        );
+
+        createdSeances.push({
+          id: seanceResult.insertId,
+          jour_semaine: seance.jour_semaine,
+          heure_debut: seance.heure_debut
+        });
+      }
+    }
+
+    res.json({
+      id: programmationId,
+      film_id,
+      cinema_id,
+      date_debut,
+      date_fin,
+      seances: createdSeances
+    });
+  } catch (error) {
+    console.error('Erreur lors de la modification de la programmation:', error);
+    res.status(500).json({ error: 'Erreur lors de la modification de la programmation' });
+  }
+});
+
+
 // 3. CRÉER PLUSIEURS SÉANCES EN UNE FOIS
 app.post('/api/films/:filmId/programmations/batch', authenticateToken, (req, res) => {
   try {

@@ -215,34 +215,45 @@ const addFilm = async () => {
   try {
     loading.value = true
     error.value = null
-    
+
     // Préparer les données pour l'API
     const filmData = {
       titre: newFilm.titre,
       realisateur: newFilm.realisateurs, // L'API attend 'realisateur'
-      genre: newFilm.langue, // Adapter selon votre structure
+      genre: newFilm.langue,             // Chez toi tu utilises "langue" comme "genre"
       duree: newFilm.duree + 'min',
       synopsis: newFilm.synopsis,
       acteurs: newFilm.acteurs.split(',').map(a => a.trim()),
       classification: newFilm.age_min + '+',
       dateSortie: new Date().toISOString().split('T')[0]
     }
-    
-    const nouveauFilm = await filmsAPI.create(filmData)
-    
+
+    // ✅ UPDATE si on est en édition
+    if (isEditing.value && editingFilmId.value) {
+      await filmsAPI.update(editingFilmId.value, filmData)
+      alert('Film modifié avec succès !')
+    } 
+    // ✅ CREATE sinon
+    else {
+      await filmsAPI.create(filmData)
+      alert('Film ajouté avec succès !')
+    }
+
     // Recharger la liste des films
     await loadFilms()
-    
+
     resetForm()
     showAddForm.value = false
-    alert('Film ajouté avec succès !')
+    isEditing.value = false
+    editingFilmId.value = null
   } catch (err) {
-    error.value = 'Erreur lors de l\'ajout du film: ' + err.message
+    error.value = "Erreur lors de l'enregistrement du film: " + err.message
     alert('Erreur: ' + err.message)
   } finally {
     loading.value = false
   }
 }
+
 
 const resetForm = () => {
   Object.keys(newFilm).forEach(key => {
