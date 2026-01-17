@@ -7,6 +7,8 @@
   },
   
   "scripts": {
+    "install": "cd backend && npm install && cd ../front/allonscinoche && npm install",
+
     "dev-front": "cd front/allonscinoche && npm run dev",
     "dev-back": "cd backend && npm run dev",
     "dev": "concurrently \"npm run dev-front\" \"npm run dev-back\" --names \"front,back\" -c \"bgBlue.bold,bgYellow.bold\" "
