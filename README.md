@@ -13,8 +13,10 @@ Follow instructions to install MySQL according to the most appropriated scenario
 
 
 ### 3. 
-- install npm 
+- install npm
+- remove the `.example` from `.env.example`, and change variables to match your case (in particular the db password variable) 
 - at project's root,
+
     - run ``npm install``
     - run ``npm run dev``
 
