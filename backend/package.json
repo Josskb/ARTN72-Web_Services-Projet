@@ -1,0 +1,5 @@
+{
+    "scripts": {
+        "dev": "bun api-films-server.js && bun db.js"
+    }
+}

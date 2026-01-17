@@ -12,23 +12,11 @@ Follow instructions to install MySQL according to the most appropriated scenario
     - unix: `./init_prj.sh`
 
 
-### 3. Start the backend server
-
-1. make sure you have npm installed
-2. cd to the backend folder : `cd ./backend`
-3. run `npm install`
-4. run `npm run dev`
-5. 
-
-
-
-### 4. Start the frontend server
-
-1. make sure you have npm installed
-2. cd to the frontend folder : `cd ./front/allonscinoche`
-3. run `npm install`
-4. run `npm run dev`
-5. click on the link (like `http://localhost:5173/index.html`) in your terminal to open the server
+### 3. 
+- install npm 
+- at project's root,
+    - run ``npm install``
+    - run ``npm run dev``
 
 
 
