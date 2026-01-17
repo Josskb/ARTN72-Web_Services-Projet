@@ -453,6 +453,8 @@ app.get('/api/films', async (req, res) => {
       statut: 'actif'
     }));
 
+    console.log(resultats)
+
     res.json({
       films: resultats,
       total: resultats.length
