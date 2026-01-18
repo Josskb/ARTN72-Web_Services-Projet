@@ -1,56 +1,54 @@
 <template>
   <nav class="navigation">
     <ul class="nav-menu">
-      <li class="nav-item">
-        <button 
-          @click="$emit('change-view', 'dashboard')"
-          :class="{ active: currentView === 'dashboard' }"
-          class="nav-button"
-        >
+
+      <li class="nav-item" v-if="isAdmin">
+        <button @click="$emit('change-view', 'dashboard')"
+                :class="{ active: currentView === 'dashboard' }"
+                class="nav-button">
           📊 Tableau de bord
         </button>
       </li>
-      <li class="nav-item">
-        <button 
-          @click="$emit('change-view', 'films')"
-          :class="{ active: currentView === 'films' }"
-          class="nav-button"
-        >
+
+      <li class="nav-item" v-if="isAdmin">
+        <button @click="$emit('change-view', 'films')"
+                :class="{ active: currentView === 'films' }"
+                class="nav-button">
           🎬 Gestion des Films
         </button>
       </li>
-      <li class="nav-item">
-        <button 
-          @click="$emit('change-view', 'cinemas')"
-          :class="{ active: currentView === 'cinemas' }"
-          class="nav-button"
-        >
+
+      <li class="nav-item" v-if="isAdmin">
+        <button @click="$emit('change-view', 'cinemas')"
+                :class="{ active: currentView === 'cinemas' }"
+                class="nav-button">
           🏢 Gestion des Cinémas
         </button>
       </li>
-      <li class="nav-item">
-        <button 
-          @click="$emit('change-view', 'programmations')"
-          :class="{ active: currentView === 'programmations' }"
-          class="nav-button"
-        >
+
+      <li class="nav-item" v-if="isAdmin">
+        <button @click="$emit('change-view', 'programmations')"
+                :class="{ active: currentView === 'programmations' }"
+                class="nav-button">
           📅 Programmations
         </button>
       </li>
+
       <li class="nav-item">
-        <button 
-          @click="$emit('change-view', 'films-by-city')"
-          :class="{ active: currentView === 'films-by-city' }"
-          class="nav-button"
-        >
+        <button @click="$emit('change-view', 'films-by-city')"
+                :class="{ active: currentView === 'films-by-city' }"
+                class="nav-button">
           🔍 Films par Ville
         </button>
       </li>
+
     </ul>
   </nav>
 </template>
 
 <script setup>
+import { useAuth } from '../services/authStore.js'
+
 defineProps({
   currentView: {
     type: String,
@@ -59,7 +57,10 @@ defineProps({
 })
 
 defineEmits(['change-view'])
+
+const { isAdmin } = useAuth()
 </script>
+
 
 <style scoped>
 .navigation {

@@ -1,4 +1,13 @@
 <template>
+  <div v-if="!isAdmin" class="access-denied">
+    <h2>⛔ Accès refusé</h2>
+    <p>Accès refusé : ADMIN requis</p>
+  </div>
+
+  <div v-else class="...">
+    <!-- ton composant actuel -->
+  </div>
+
   <div class="cinema-management">
     <div class="page-header">
       <h2 class="page-title">🏢 Gestion des Cinémas</h2>
@@ -141,6 +150,9 @@
 </template>
 
 <script setup>
+import { useAuth } from '../services/authStore.js'
+const { isAdmin } = useAuth()
+
 import { ref, reactive, onMounted } from 'vue'
 import { cinemasAPI } from '../services/api.js'
 
