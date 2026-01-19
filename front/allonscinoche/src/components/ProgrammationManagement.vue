@@ -1,4 +1,13 @@
 <template>
+  <div v-if="!isAdmin" class="access-denied">
+    <h2>⛔ Accès refusé</h2>
+    <p>Accès refusé : ADMIN requis</p>
+  </div>
+
+  <div v-else class="...">
+    <!-- ton composant actuel -->
+  </div>
+
   <div class="programmation-management">
     <div v-if="error" class="error-message">⚠️ {{ error }}</div>
     <div v-if="loading" class="loading">Chargement...</div>
@@ -176,6 +185,9 @@
 </template>
 
 <script setup>
+import { useAuth } from '../services/authStore.js'
+const { isAdmin } = useAuth()
+
 import { ref, reactive, computed, onMounted } from 'vue'
 import { filmsAPI, cinemasAPI, programmationsAPI } from '../services/api'
 

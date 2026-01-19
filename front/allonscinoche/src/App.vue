@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import Header from './components/Header.vue'
 import Navigation from './components/Navigation.vue'
 import FilmManagement from './components/FilmManagement.vue'
@@ -8,18 +8,44 @@ import ProgrammationManagement from './components/ProgrammationManagement.vue'
 import Dashboard from './components/Dashboard.vue'
 import FilmsByCity from './components/FilmsByCity.vue'
 
-const currentView = ref('dashboard')
+import { useAuth } from './services/authStore.js'
+
+const { isAdmin } = useAuth()
+
+const adminViews = ['dashboard', 'films', 'cinemas', 'programmations']
+
+// ✅ Par défaut : public si pas admin
+const currentView = ref(isAdmin.value ? 'dashboard' : 'films-by-city')
 
 const setView = (view) => {
   currentView.value = view
 }
+
+// ✅ Si on perd le rôle ADMIN, on sort des pages admin
+watch(isAdmin, (val) => {
+  if (!val && adminViews.includes(currentView.value)) {
+    currentView.value = 'films-by-city'
+  }
+})
+
+const onLoginSuccess = () => {
+  // Si l’admin se connecte => go dashboard
+  currentView.value = 'dashboard'
+}
+
+const onLogout = () => {
+  currentView.value = 'films-by-city'
+}
 </script>
+
 
 <template>
   <div id="app">
-    <Header />
+    <Header @login-success="onLoginSuccess" @logout="onLogout" />
+
     <div class="main-container">
       <Navigation :current-view="currentView" @change-view="setView" />
+
       <main class="content">
         <Dashboard v-if="currentView === 'dashboard'" @change-view="setView" />
         <FilmManagement v-else-if="currentView === 'films'" />
@@ -30,6 +56,7 @@ const setView = (view) => {
     </div>
   </div>
 </template>
+
 
 <style scoped>
 #app {

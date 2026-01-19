@@ -1,4 +1,13 @@
 <template>
+  <div v-if="!isAdmin" class="access-denied">
+    <h2>⛔ Accès refusé</h2>
+    <p>Cette page est réservée aux administrateurs.</p>
+  </div>
+
+  <div v-else class="dashboard">
+    <!-- ton dashboard actuel -->
+  </div>
+
   <div class="dashboard">
     <h2 class="page-title">📊 Tableau de bord - AllonsCinoche</h2>
     
@@ -85,6 +94,8 @@
 </template>
 
 <script setup>
+import { useAuth } from '../services/authStore.js'
+const { isAdmin } = useAuth()
 import { ref, onMounted, computed } from 'vue'
 import { filmsAPI, cinemasAPI, programmationsAPI } from '../services/api.js'
 
@@ -161,6 +172,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
+.access-denied{
+  padding: 2rem;
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-radius: 12px;
+  color: #c53030;
+}
+
+
 .dashboard {
   width: 100%;
   max-width: 100%;

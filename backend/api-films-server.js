@@ -1,6 +1,44 @@
+require('dotenv').config();
+
 const express = require('express');
 const db = require('./db');
 const app = express();
+
+const cors = require('cors');
+
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+const bcrypt = require('bcryptjs');
+
+
+const {
+  ensureAuthSetup,
+  authenticateToken,
+  requireAdmin,
+  generateToken,
+  findUserByUsername,
+  toPublicUser
+} = require('./auth');
+
+
+/*const express = require('express');
+const db = require('./db');
+const app = express();
+// rajouter par rayan pour admin
+const bcrypt = require('bcryptjs');
+const {
+  ensureAuthSetup,
+  authenticateToken,
+  requireAdmin,
+  generateToken,
+  findUserByUsername,
+  toPublicUser
+} = require('./auth');*/
+
 
 // Middleware CORS pour permettre les requêtes depuis le frontend
 app.use((req, res, next) => {
@@ -18,8 +56,48 @@ app.use((req, res, next) => {
 // Middleware
 app.use(express.json());
 
+// ===============================
+// AUTH ROUTES (JWT)
+// ===============================
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+
+    if (!username || !password) {
+      return res.status(400).json({ error: "username et password requis" });
+    }
+
+    const user = await findUserByUsername(username);
+    if (!user) {
+      return res.status(401).json({ error: "Identifiants invalides" });
+    }
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) {
+      return res.status(401).json({ error: "Identifiants invalides" });
+    }
+
+    const token = generateToken(user);
+
+    return res.json({
+      token,
+      user: toPublicUser(user)
+    });
+  } catch (error) {
+    console.error("Erreur login:", error);
+    return res.status(500).json({ error: "Erreur lors de la connexion" });
+  }
+});
+
+app.get('/api/auth/me', authenticateToken, (req, res) => {
+  return res.json({ user: req.user });
+});
+
+
+
 // Middleware d'authentification (simplifié)
-const authenticateToken = (req, res, next) => {
+/*const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   
@@ -30,10 +108,10 @@ const authenticateToken = (req, res, next) => {
   // Ici, vous valideriez le token JWT
   // Pour cet exemple, on accepte n'importe quel token
   next();
-};
+};*/
 
 // 1. PUBLIER UN NOUVEAU FILM
-app.post('/api/films', authenticateToken, async (req, res) => {
+app.post('/api/films', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const {
       titre,
@@ -156,7 +234,7 @@ app.post('/api/films', authenticateToken, async (req, res) => {
 });
 
 // 2. CRÉER UNE PROGRAMMATION POUR UN FILM
-app.post('/api/films/:filmId/programmations', authenticateToken, async (req, res) => {
+app.post('/api/films/:filmId/programmations', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const filmId = parseInt(req.params.filmId);
     const {
@@ -241,7 +319,7 @@ app.post('/api/films/:filmId/programmations', authenticateToken, async (req, res
 });
 
 // 15bis. MODIFIER UNE PROGRAMMATION COMPLÈTE
-app.put('/api/programmations/:programmationId', authenticateToken, async (req, res) => {
+app.put('/api/programmations/:programmationId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const programmationId = parseInt(req.params.programmationId);
     const { film_id, cinema_id, date_debut, date_fin, seances } = req.body;
@@ -351,7 +429,7 @@ app.put('/api/programmations/:programmationId', authenticateToken, async (req, r
 
 
 // 3. CRÉER PLUSIEURS SÉANCES EN UNE FOIS
-app.post('/api/films/:filmId/programmations/batch', authenticateToken, (req, res) => {
+app.post('/api/films/:filmId/programmations/batch', authenticateToken, requireAdmin, (req, res) => {
   try {
     const filmId = parseInt(req.params.filmId);
     const { seances, tarifsDefaut } = req.body;
@@ -605,7 +683,7 @@ app.get('/api/films/:filmId/programmations', (req, res) => {
 });
 
 // 7. MODIFIER UN FILM
-app.put('/api/films/:filmId', authenticateToken, async (req, res) => {
+app.put('/api/films/:filmId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const filmId = parseInt(req.params.filmId);
     const { titre, duree, langue, synopsis, age_min } = req.body;
@@ -668,7 +746,7 @@ app.put('/api/films/:filmId', authenticateToken, async (req, res) => {
 });
 
 // 8. SUPPRIMER UN FILM
-app.delete('/api/films/:filmId', authenticateToken, async (req, res) => {
+app.delete('/api/films/:filmId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const filmId = parseInt(req.params.filmId);
 
@@ -702,7 +780,7 @@ app.delete('/api/films/:filmId', authenticateToken, async (req, res) => {
 // ========================================
 
 // 9. CRÉER UN NOUVEAU CINÉMA
-app.post('/api/cinemas', authenticateToken, async (req, res) => {
+app.post('/api/cinemas', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { nom, note, adresse } = req.body;
 
@@ -845,7 +923,7 @@ app.get('/api/cinemas/:cinemaId', async (req, res) => {
 });
 
 // 12. MODIFIER UN CINÉMA
-app.put('/api/cinemas/:cinemaId', authenticateToken, async (req, res) => {
+app.put('/api/cinemas/:cinemaId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const cinemaId = parseInt(req.params.cinemaId);
     const { nom, note, adresse } = req.body;
@@ -913,7 +991,7 @@ app.put('/api/cinemas/:cinemaId', authenticateToken, async (req, res) => {
 });
 
 // 13. SUPPRIMER UN CINÉMA
-app.delete('/api/cinemas/:cinemaId', authenticateToken, async (req, res) => {
+app.delete('/api/cinemas/:cinemaId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const cinemaId = parseInt(req.params.cinemaId);
 
@@ -1007,7 +1085,7 @@ app.get('/api/programmations', async (req, res) => {
 });
 
 // 15. CRÉER UNE PROGRAMMATION COMPLÈTE
-app.post('/api/programmations', authenticateToken, async (req, res) => {
+app.post('/api/programmations', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { film_id, cinema_id, date_debut, date_fin, seances } = req.body;
 
@@ -1081,7 +1159,7 @@ app.post('/api/programmations', authenticateToken, async (req, res) => {
 });
 
 // 16. SUPPRIMER UNE PROGRAMMATION
-app.delete('/api/programmations/:programmationId', authenticateToken, async (req, res) => {
+app.delete('/api/programmations/:programmationId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const programmationId = parseInt(req.params.programmationId);
 
@@ -1115,10 +1193,24 @@ app.use((error, req, res, next) => {
 });
 
 // Démarrer le serveur
-const PORT = process.env.PORT || 3000;
+/*const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
   console.log(`Documentation API: http://localhost:${PORT}/api/films`);
-});
+});*/
+
+const PORT = process.env.PORT || 3000;
+
+ensureAuthSetup()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Serveur démarré sur le port ${PORT}`);
+      console.log(`Login admin: POST http://localhost:${PORT}/api/auth/login`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Erreur init auth:', err);
+    process.exit(1);
+  });
 
 module.exports = app;
