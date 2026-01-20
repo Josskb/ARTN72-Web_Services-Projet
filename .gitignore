@@ -1,9 +1,13 @@
+# ** prefix means no matter where the file is 
 **/package-lock.json
 **/.env
+**/bun.lock
+
 
 node_modules/
 
 front/allonscinoche/node_modules/
 
 front/allonscinoche/.vscode/
+
 

@@ -1,14 +1,10 @@
 {
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "mysql2": "^3.16.0",
-    "concurrently": "9.2.1" 
+
+    "concurrently": "9.2.1"
   },
-  
   "scripts": {
     "install": "cd backend && bun install && cd ../front/allonscinoche && bun install",
-
     "dev-front": "cd front/allonscinoche && bun run dev",
     "dev-back": "cd backend && bun run dev",
     "dev": "concurrently \"bun run dev-front\" \"bun run dev-back\" --names \"front,back\" -c \"bgBlue.bold,bgYellow.bold\" "
