@@ -4,11 +4,7 @@
     <p>Accès refusé : ADMIN requis</p>
   </div>
 
-  <div v-else class="...">
-    <!-- ton composant actuel -->
-  </div>
-
-  <div class="film-management">
+  <div v-else class="film-management">
     <div class="page-header">
       <h2 class="page-title">🎬 Gestion des Films</h2>
       <button @click="toggleAddForm" class="btn-primary">
@@ -23,21 +19,21 @@
         <div class="form-row">
           <div class="form-group">
             <label for="titre">Titre du film *</label>
-            <input 
-              type="text" 
-              id="titre" 
-              v-model="newFilm.titre" 
-              required 
+            <input
+              type="text"
+              id="titre"
+              v-model="newFilm.titre"
+              required
               placeholder="Ex: Inception"
             >
           </div>
           <div class="form-group">
             <label for="duree">Durée (minutes) *</label>
-            <input 
-              type="number" 
-              id="duree" 
-              v-model="newFilm.duree" 
-              required 
+            <input
+              type="number"
+              id="duree"
+              v-model="newFilm.duree"
+              required
               min="1"
               placeholder="Ex: 148"
             >
@@ -83,32 +79,32 @@
 
         <div class="form-group full-width">
           <label for="realisateurs">Réalisateur(s) *</label>
-          <input 
-            type="text" 
-            id="realisateurs" 
-            v-model="newFilm.realisateurs" 
-            required 
+          <input
+            type="text"
+            id="realisateurs"
+            v-model="newFilm.realisateurs"
+            required
             placeholder="Ex: Christopher Nolan, David Fincher (séparer par des virgules)"
           >
         </div>
 
         <div class="form-group full-width">
           <label for="acteurs">Acteurs principaux *</label>
-          <input 
-            type="text" 
-            id="acteurs" 
-            v-model="newFilm.acteurs" 
-            required 
+          <input
+            type="text"
+            id="acteurs"
+            v-model="newFilm.acteurs"
+            required
             placeholder="Ex: Leonardo DiCaprio, Marion Cotillard, Tom Hardy (séparer par des virgules)"
           >
         </div>
 
         <div class="form-group full-width">
           <label for="synopsis">Synopsis *</label>
-          <textarea 
-            id="synopsis" 
-            v-model="newFilm.synopsis" 
-            required 
+          <textarea
+            id="synopsis"
+            v-model="newFilm.synopsis"
+            required
             rows="4"
             placeholder="Décrivez l'histoire du film..."
           ></textarea>
@@ -124,22 +120,21 @@
     <!-- Liste des films -->
     <div class="films-list">
       <h3>Films existants</h3>
-      
-      <!-- Message de chargement -->
+
       <div v-if="loading" class="loading-message">
         <p>⏳ Chargement des films...</p>
       </div>
-      
-      <!-- Message d'erreur -->
+
       <div v-else-if="error" class="error-message">
         <p>❌ {{ error }}</p>
         <button @click="loadFilms" class="btn-retry">🔄 Réessayer</button>
       </div>
-      
+
       <div v-else-if="films.length === 0" class="no-films">
         <p>Aucun film enregistré pour le moment.</p>
         <p>Cliquez sur "Ajouter un film" pour commencer !</p>
       </div>
+
       <div v-else class="films-grid">
         <div v-for="film in films" :key="film.id" class="film-card">
           <div class="film-header">
@@ -149,13 +144,17 @@
               <button @click="deleteFilm(film.id)" class="btn-delete">🗑️</button>
             </div>
           </div>
+
           <div class="film-details">
             <p><strong>Durée:</strong> {{ film.duree }}</p>
             <p><strong>Réalisateur:</strong> {{ film.realisateur }}</p>
             <p><strong>Genre:</strong> {{ film.genre }}</p>
             <p><strong>Classification:</strong> {{ film.classification }}</p>
-            <p v-if="film.acteurs && film.acteurs.length"><strong>Acteurs:</strong> {{ film.acteurs.join(', ') }}</p>
+            <p v-if="film.acteurs && film.acteurs.length">
+              <strong>Acteurs:</strong> {{ film.acteurs.join(', ') }}
+            </p>
           </div>
+
           <div class="film-synopsis" v-if="film.synopsis">
             <strong>Synopsis:</strong>
             <p>{{ film.synopsis }}</p>
@@ -167,11 +166,10 @@
 </template>
 
 <script setup>
-import { useAuth } from '../services/authStore.js'
-const { isAdmin } = useAuth()
-
 import { ref, reactive, onMounted } from 'vue'
 import { filmsAPI } from '../services/api.js'
+import { useAuth } from '../services/authStore.js'
+const { isAdmin } = useAuth()
 
 const showAddForm = ref(false)
 const films = ref([])
@@ -179,7 +177,6 @@ const loading = ref(false)
 const error = ref(null)
 const isEditing = ref(false)
 const editingFilmId = ref(null)
-
 
 const newFilm = reactive({
   titre: '',
@@ -194,8 +191,6 @@ const newFilm = reactive({
 
 const toggleAddForm = () => {
   showAddForm.value = !showAddForm.value
-
-  // Si on ferme le formulaire => on reset tout proprement
   if (!showAddForm.value) {
     resetForm()
     isEditing.value = false
@@ -203,8 +198,6 @@ const toggleAddForm = () => {
   }
 }
 
-
-// Charger les films au montage du composant
 onMounted(async () => {
   await loadFilms()
 })
@@ -228,32 +221,41 @@ const addFilm = async () => {
     loading.value = true
     error.value = null
 
-    // Préparer les données pour l'API
-    const filmData = {
-      titre: newFilm.titre,
-      realisateur: newFilm.realisateurs, // L'API attend 'realisateur'
-      genre: newFilm.langue,             // Chez toi tu utilises "langue" comme "genre"
-      duree: newFilm.duree + 'min',
-      synopsis: newFilm.synopsis,
-      acteurs: newFilm.acteurs.split(',').map(a => a.trim()),
-      classification: newFilm.age_min + '+',
-      dateSortie: new Date().toISOString().split('T')[0]
+    const realisateurPrincipal = (newFilm.realisateurs || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)[0] || ''
+
+    const acteursArray = (newFilm.acteurs || '')
+      .split(',')
+      .map(a => a.trim())
+      .filter(Boolean)
+
+    const dureeNum = Number(newFilm.duree)
+    if (!dureeNum || dureeNum <= 0) {
+      alert("La durée doit être un nombre > 0")
+      return
     }
 
-    // ✅ UPDATE si on est en édition
+    const filmData = {
+      titre: newFilm.titre,
+      duree: dureeNum,
+      realisateur: realisateurPrincipal,
+      genre: newFilm.langue,
+      synopsis: newFilm.synopsis,
+      acteurs: acteursArray,
+      classification: `${newFilm.age_min}+`
+    }
+
     if (isEditing.value && editingFilmId.value) {
       await filmsAPI.update(editingFilmId.value, filmData)
       alert('Film modifié avec succès !')
-    } 
-    // ✅ CREATE sinon
-    else {
+    } else {
       await filmsAPI.create(filmData)
       alert('Film ajouté avec succès !')
     }
 
-    // Recharger la liste des films
     await loadFilms()
-
     resetForm()
     showAddForm.value = false
     isEditing.value = false
@@ -266,57 +268,39 @@ const addFilm = async () => {
   }
 }
 
-
 const resetForm = () => {
   Object.keys(newFilm).forEach(key => {
-    if (key === 'sous_titres') {
-      newFilm[key] = 'Aucun'
-    } else if (key === 'age_min') {
-      newFilm[key] = 0
-    } else {
-      newFilm[key] = ''
-    }
+    if (key === 'sous_titres') newFilm[key] = 'Aucun'
+    else if (key === 'age_min') newFilm[key] = 0
+    else newFilm[key] = ''
   })
 }
 
 const editFilm = (film) => {
-  // Active le mode édition
   isEditing.value = true
   editingFilmId.value = film.id
-
-  // Ouvre le formulaire
   showAddForm.value = true
 
-  // Pré-remplissage du formulaire avec les données du film
   newFilm.titre = film.titre || ''
 
-  // Exemple: film.duree peut être "120min" => on récupère juste 120
   const dureeNum = parseInt((film.duree || '').toString().replace(/\D/g, ''))
   newFilm.duree = isNaN(dureeNum) ? '' : dureeNum
 
-  newFilm.langue = film.genre || '' // chez toi "langue" est utilisé comme "genre"
+  newFilm.langue = film.genre || ''
   newFilm.realisateurs = film.realisateur || ''
 
-  // Acteurs : si c'est un tableau => join, sinon string direct
-  if (Array.isArray(film.acteurs)) {
-    newFilm.acteurs = film.acteurs.join(', ')
-  } else {
-    newFilm.acteurs = film.acteurs || ''
-  }
+  if (Array.isArray(film.acteurs)) newFilm.acteurs = film.acteurs.join(', ')
+  else newFilm.acteurs = film.acteurs || ''
 
   newFilm.synopsis = film.synopsis || ''
 
-  // Classification exemple "12+" => on récupère 12
   const ageNum = parseInt((film.classification || '0').toString().replace(/\D/g, ''))
   newFilm.age_min = isNaN(ageNum) ? 0 : ageNum
 
-  // Sous-titres : ton backend n’en renvoie pas, donc on met par défaut
   newFilm.sous_titres = 'Aucun'
 
-  // Optionnel : remonter en haut de page pour voir le formulaire
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
 
 const deleteFilm = async (filmId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce film ?')) {
@@ -336,6 +320,14 @@ const deleteFilm = async (filmId) => {
 </script>
 
 <style scoped>
+.access-denied{
+  padding: 2rem;
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-radius: 12px;
+  color: #c53030;
+}
+
 .film-management {
   max-width: 1200px;
   margin: 0 auto;
@@ -420,104 +412,51 @@ const deleteFilm = async (filmId) => {
   border: 2px solid #e2e8f0;
   border-radius: 8px;
   font-size: 1rem;
-  transition: border-color 0.3s ease;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .form-actions {
   display: flex;
   gap: 1rem;
-  justify-content: flex-start;
 }
 
 .btn-submit {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  background: #48bb78;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
-  color: white;
+  background: #edf2f7;
+  color: #2d3748;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-submit:hover,
-.btn-secondary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
-
-.films-list {
-  background: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.films-list h3 {
-  margin: 0 0 1.5rem 0;
-  color: #2d3748;
-  font-size: 1.5rem;
-}
-
-.no-films {
-  text-align: center;
-  padding: 3rem;
-  color: #718096;
 }
 
 .films-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
 }
 
 .film-card {
-  background: #f7fafc;
-  border: 2px solid #e2e8f0;
+  background: white;
+  padding: 1rem;
   border-radius: 12px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-}
-
-.film-card:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .film-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.film-header h4 {
-  margin: 0;
-  color: #2d3748;
-  font-size: 1.25rem;
+  align-items: start;
+  gap: 1rem;
 }
 
 .film-actions {
@@ -525,94 +464,17 @@ const deleteFilm = async (filmId) => {
   gap: 0.5rem;
 }
 
-.btn-edit,
-.btn-delete {
-  background: none;
+.btn-edit, .btn-delete {
   border: none;
-  font-size: 1.2rem;
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.3s ease;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background: #edf2f7;
 }
 
-.btn-edit:hover {
-  background-color: #e2e8f0;
-}
-
-.btn-delete:hover {
-  background-color: #fed7d7;
-}
-
-.film-details {
-  margin-bottom: 1rem;
-}
-
-.film-details p {
-  margin: 0.25rem 0;
-  font-size: 0.9rem;
-  color: #4a5568;
-}
-
-.film-synopsis {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.film-synopsis p {
-  margin: 0.5rem 0 0 0;
-  color: #4a5568;
-  line-height: 1.5;
-}
-
-.loading-message,
-.error-message {
-  text-align: center;
-  padding: 2rem;
-  font-size: 1.1rem;
-}
-
-.loading-message {
-  color: #4299e1;
-}
-
-.error-message {
-  color: #e53e3e;
-}
-
-.btn-retry {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background-color: #4299e1;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.btn-retry:hover {
-  background-color: #3182ce;
-}
-
-@media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .films-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .add-film-form,
-  .films-list {
-    padding: 1rem;
-  }
+.loading-message, .error-message, .no-films {
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f7fafc;
 }
 </style>
