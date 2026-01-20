@@ -4,11 +4,7 @@
     <p>Accès refusé : ADMIN requis</p>
   </div>
 
-  <div v-else class="...">
-    <!-- ton composant actuel -->
-  </div>
-
-  <div class="cinema-management">
+  <div v-else class="cinema-management">
     <div class="page-header">
       <h2 class="page-title">🏢 Gestion des Cinémas</h2>
       <button @click="showAddForm = !showAddForm" class="btn-primary">
@@ -24,22 +20,22 @@
         <div class="form-row">
           <div class="form-group">
             <label for="nom">Nom du cinéma *</label>
-            <input 
-              type="text" 
-              id="nom" 
-              v-model="newCinema.nom" 
-              required 
+            <input
+              type="text"
+              id="nom"
+              v-model="newCinema.nom"
+              required
               placeholder="Ex: Cinéma Lumière"
             >
           </div>
           <div class="form-group">
             <label for="note">Note (sur 5)</label>
-            <input 
-              type="number" 
-              id="note" 
-              v-model="newCinema.note" 
-              min="0" 
-              max="5" 
+            <input
+              type="number"
+              id="note"
+              v-model="newCinema.note"
+              min="0"
+              max="5"
               step="0.1"
               placeholder="Ex: 4.5"
             >
@@ -51,43 +47,43 @@
           <div class="form-row">
             <div class="form-group">
               <label for="numero">Numéro</label>
-              <input 
-                type="text" 
-                id="numero" 
-                v-model="newCinema.adresse.numero" 
+              <input
+                type="text"
+                id="numero"
+                v-model="newCinema.adresse.numero"
                 placeholder="Ex: 12"
               >
             </div>
             <div class="form-group">
               <label for="rue">Rue *</label>
-              <input 
-                type="text" 
-                id="rue" 
-                v-model="newCinema.adresse.rue" 
-                required 
+              <input
+                type="text"
+                id="rue"
+                v-model="newCinema.adresse.rue"
+                required
                 placeholder="Ex: Avenue des Lumières"
               >
             </div>
           </div>
-          
+
           <div class="form-row">
             <div class="form-group">
               <label for="ville">Ville *</label>
-              <input 
-                type="text" 
-                id="ville" 
-                v-model="newCinema.adresse.ville" 
-                required 
+              <input
+                type="text"
+                id="ville"
+                v-model="newCinema.adresse.ville"
+                required
                 placeholder="Ex: Paris"
               >
             </div>
             <div class="form-group">
               <label for="code_postal">Code postal *</label>
-              <input 
-                type="text" 
-                id="code_postal" 
-                v-model="newCinema.adresse.code_postal" 
-                required 
+              <input
+                type="text"
+                id="code_postal"
+                v-model="newCinema.adresse.code_postal"
+                required
                 pattern="[0-9]{5}"
                 placeholder="Ex: 75001"
               >
@@ -105,22 +101,23 @@
     <!-- Liste des cinémas -->
     <div class="cinemas-list">
       <h3>Cinémas existants</h3>
-      
+
       <!-- Message de chargement -->
       <div v-if="loading" class="loading-message">
         <p>⏳ Chargement des cinémas...</p>
       </div>
-      
+
       <!-- Message d'erreur -->
       <div v-else-if="error" class="error-message">
         <p>❌ {{ error }}</p>
         <button @click="loadCinemas" class="btn-retry">🔄 Réessayer</button>
       </div>
-      
+
       <div v-else-if="cinemas.length === 0" class="no-cinemas">
         <p>Aucun cinéma enregistré pour le moment.</p>
         <p>Cliquez sur "Ajouter un cinéma" pour commencer !</p>
       </div>
+
       <div v-else class="cinemas-grid">
         <div v-for="cinema in cinemas" :key="cinema.id" class="cinema-card">
           <div class="cinema-header">
@@ -136,7 +133,7 @@
               <button @click="deleteCinema(cinema.id)" class="btn-delete">🗑️</button>
             </div>
           </div>
-          
+
           <div class="cinema-details">
             <div class="address-section">
               <h5>📍 Adresse</h5>
@@ -146,15 +143,16 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { useAuth } from '../services/authStore.js'
-const { isAdmin } = useAuth()
-
 import { ref, reactive, onMounted } from 'vue'
 import { cinemasAPI } from '../services/api.js'
+import { useAuth } from '../services/authStore.js'
+
+const { isAdmin } = useAuth()
 
 const showAddForm = ref(false)
 const cinemas = ref([])
@@ -162,7 +160,6 @@ const loading = ref(false)
 const error = ref(null)
 const isEditing = ref(false)
 const editingCinemaId = ref(null)
-
 
 const newCinema = reactive({
   nom: '',
@@ -175,7 +172,6 @@ const newCinema = reactive({
   }
 })
 
-// Charger les cinémas au montage du composant
 onMounted(async () => {
   await loadCinemas()
 })
@@ -210,13 +206,10 @@ const addCinema = async () => {
       }
     }
 
-    // ✅ UPDATE si on est en édition
     if (isEditing.value && editingCinemaId.value) {
       await cinemasAPI.update(editingCinemaId.value, cinemaData)
       alert('Cinéma modifié avec succès !')
-    } 
-    // ✅ CREATE sinon
-    else {
+    } else {
       await cinemasAPI.create(cinemaData)
       alert('Cinéma ajouté avec succès !')
     }
@@ -235,7 +228,6 @@ const addCinema = async () => {
   }
 }
 
-
 const resetForm = () => {
   newCinema.nom = ''
   newCinema.note = ''
@@ -246,14 +238,10 @@ const resetForm = () => {
 }
 
 const editCinema = (cinema) => {
-  // Active le mode édition
   isEditing.value = true
   editingCinemaId.value = cinema.id
-
-  // Ouvre le formulaire
   showAddForm.value = true
 
-  // Pré-remplissage des champs
   newCinema.nom = cinema.nom || ''
   newCinema.note = cinema.note !== null && cinema.note !== undefined ? cinema.note : ''
 
@@ -262,10 +250,8 @@ const editCinema = (cinema) => {
   newCinema.adresse.ville = cinema.adresse?.ville || ''
   newCinema.adresse.code_postal = cinema.adresse?.code_postal || ''
 
-  // Optionnel : remonter en haut pour voir direct le formulaire
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
 
 const deleteCinema = async (cinemaId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce cinéma ?')) {
@@ -295,6 +281,14 @@ const formatAddress = (adresse) => {
 </script>
 
 <style scoped>
+.access-denied{
+  padding: 2rem;
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-radius: 12px;
+  color: #c53030;
+}
+
 .cinema-management {
   max-width: 1200px;
   margin: 0 auto;
@@ -577,20 +571,20 @@ const formatAddress = (adresse) => {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .cinemas-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .add-cinema-form,
   .cinemas-list {
     padding: 1rem;
   }
-  
+
   .form-section {
     padding: 1rem;
   }

@@ -429,70 +429,83 @@ app.put('/api/programmations/:programmationId', authenticateToken, requireAdmin,
 
 
 // 3. CRÉER PLUSIEURS SÉANCES EN UNE FOIS
-app.post('/api/films/:filmId/programmations/batch', authenticateToken, requireAdmin, (req, res) => {
-  try {
-    const filmId = parseInt(req.params.filmId);
-    const { seances, tarifsDefaut } = req.body;
+app.post(
+  '/api/films/:filmId/programmations/batch',
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+      const filmId = Number(req.params.filmId);
+      if (!filmId) return res.status(400).json({ error: 'filmId invalide' });
 
-    // Vérifier que le film existe
-    const film = films.find(f => f.id === filmId);
-    if (!film) {
-      return res.status(404).json({ error: 'Film non trouvé' });
-    }
-
-    const nouvellesProgrammations = [];
-    const erreurs = [];
-
-    seances.forEach((seance, index) => {
-      // Vérifier les conflits
-      const conflitProgrammation = programmations.find(p => 
-        p.salleId === seance.salleId && 
-        Math.abs(new Date(p.dateHeure) - new Date(seance.dateHeure)) < 3 * 60 * 60 * 1000
-      );
-
-      if (conflitProgrammation) {
-        erreurs.push({
-          index,
-          error: `Conflit pour la séance ${index + 1}: salle ${seance.salleId} occupée`
-        });
-        return;
+      const items = req.body?.items;
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: "Body invalide : 'items' doit être un tableau non vide" });
       }
 
-      const nouvelleProgrammation = {
-        id: nextProgrammationId++,
-        filmId,
-        salleId: seance.salleId,
-        dateHeure: seance.dateHeure,
-        tarifs: seance.tarifs || tarifsDefaut || { normal: 12.50, reduit: 9.50, enfant: 8.00 },
-        placesDisponibles: seance.placesDisponibles || 100,
-        placesReservees: 0,
-        version: seance.version || 'VF',
-        qualite: seance.qualite || 'HD',
-        typeSeance: seance.typeSeance || 'standard',
-        statut: 'programmee',
-        dateCreation: new Date().toISOString()
-      };
+      await conn.beginTransaction();
 
-      programmations.push(nouvelleProgrammation);
-      nouvellesProgrammations.push(nouvelleProgrammation);
-    });
+      const created = [];
 
-    if (erreurs.length > 0) {
-      return res.status(409).json({
-        message: 'Certaines programmations n\'ont pas pu être créées',
-        programmationsCreees: nouvellesProgrammations,
-        erreurs
-      });
+      for (const it of items) {
+        const cinemaId = Number(it.cinema_id);
+        const dateDebut = it.date_debut;
+        const dateFin = it.date_fin;
+        const seances = it.seances;
+
+        if (!cinemaId || !dateDebut || !dateFin) {
+          throw new Error("Chaque item doit contenir cinema_id, date_debut, date_fin");
+        }
+        if (!Array.isArray(seances) || seances.length === 0) {
+          throw new Error("Chaque item doit contenir un tableau 'seances' non vide");
+        }
+
+        const [filmExists] = await conn.query(`SELECT id FROM film WHERE id = ?`, [filmId]);
+        if (filmExists.length === 0) throw new Error(`Film ${filmId} introuvable`);
+
+        const [cinemaExists] = await conn.query(`SELECT id FROM cinema WHERE id = ?`, [cinemaId]);
+        if (cinemaExists.length === 0) throw new Error(`Cinéma ${cinemaId} introuvable`);
+
+        const [insProg] = await conn.query(
+          `INSERT INTO programmation (film_id, cinema_id, date_debut, date_fin)
+           VALUES (?, ?, ?, ?)`,
+          [filmId, cinemaId, dateDebut, dateFin]
+        );
+
+        const progId = insProg.insertId;
+
+        const values = seances.map(s => {
+          if (!s.jour_semaine || !s.heure_debut) {
+            throw new Error("Chaque séance doit avoir jour_semaine et heure_debut");
+          }
+          const time = (typeof s.heure_debut === 'string' && s.heure_debut.length === 5)
+            ? `${s.heure_debut}:00`
+            : s.heure_debut;
+          return [progId, s.jour_semaine, time];
+        });
+
+        await conn.query(
+          `INSERT INTO seance (programmation_id, jour_semaine, heure_debut)
+           VALUES ?`,
+          [values]
+        );
+
+        created.push({ programmation_id: progId });
+      }
+
+      await conn.commit();
+      res.status(201).json({ message: 'Batch créé', created });
+    } catch (err) {
+      await conn.rollback();
+      console.error(err);
+      res.status(400).json({ error: err.message || 'Erreur batch' });
+    } finally {
+      conn.release();
     }
-
-    res.status(201).json({
-      message: `${nouvellesProgrammations.length} programmations créées avec succès`,
-      programmations: nouvellesProgrammations
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Erreur lors de la création des programmations' });
   }
-});
+);
+
 
 // 4. RÉCUPÉRER TOUS LES FILMS
 app.get('/api/films', async (req, res) => {
@@ -659,28 +672,60 @@ app.get('/api/villes/:villeNom/films', async (req, res) => {
 });
 
 // 6. RÉCUPÉRER LES PROGRAMMATIONS D'UN FILM
-app.get('/api/films/:filmId/programmations', (req, res) => {
+app.get('/api/films/:filmId/programmations', async (req, res) => {
   try {
-    const filmId = parseInt(req.params.filmId);
-    let resultats = programmations.filter(p => p.filmId === filmId);
+    const filmId = Number(req.params.filmId);
+    if (!filmId) return res.status(400).json({ error: 'filmId invalide' });
 
-    // Filtre par date optionnel
-    if (req.query.date) {
-      const dateRecherchee = new Date(req.query.date);
-      resultats = resultats.filter(p => {
-        const dateProgrammation = new Date(p.dateHeure);
-        return dateProgrammation.toDateString() === dateRecherchee.toDateString();
+    const [progs] = await pool.query(
+      `SELECT id, film_id, cinema_id, date_debut, date_fin
+       FROM programmation
+       WHERE film_id = ?
+       ORDER BY date_debut DESC`,
+      [filmId]
+    );
+
+    if (progs.length === 0) {
+      return res.json({ programmations: [] });
+    }
+
+    const progIds = progs.map(p => p.id);
+
+    const [seances] = await pool.query(
+      `SELECT id, programmation_id, jour_semaine, heure_debut
+       FROM seance
+       WHERE programmation_id IN (?)
+       ORDER BY FIELD(programmation_id, ${progIds.map(() => '?').join(',')}),
+                jour_semaine, heure_debut`,
+      [...progIds, ...progIds]
+    );
+
+    const seancesByProg = new Map();
+    for (const s of seances) {
+      if (!seancesByProg.has(s.programmation_id)) seancesByProg.set(s.programmation_id, []);
+      seancesByProg.get(s.programmation_id).push({
+        id: s.id,
+        jour_semaine: s.jour_semaine,
+        heure_debut: s.heure_debut
       });
     }
 
-    res.json({
-      programmations: resultats,
-      total: resultats.length
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Erreur lors de la récupération des programmations' });
+    const result = progs.map(p => ({
+      id: p.id,
+      film_id: p.film_id,
+      cinema_id: p.cinema_id,
+      date_debut: p.date_debut,
+      date_fin: p.date_fin,
+      seances: seancesByProg.get(p.id) || []
+    }));
+
+    res.json({ programmations: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
 // 7. MODIFIER UN FILM
 app.put('/api/films/:filmId', authenticateToken, requireAdmin, async (req, res) => {

@@ -4,14 +4,10 @@
     <p>Accès refusé : ADMIN requis</p>
   </div>
 
-  <div v-else class="...">
-    <!-- ton composant actuel -->
-  </div>
-
-  <div class="programmation-management">
+  <div v-else class="programmation-management">
     <div v-if="error" class="error-message">⚠️ {{ error }}</div>
     <div v-if="loading" class="loading">Chargement...</div>
-    
+
     <div class="page-header">
       <h2 class="page-title">📅 Gestion des Programmations</h2>
       <button @click="showAddForm = !showAddForm" class="btn-primary">
@@ -24,7 +20,7 @@
     <div v-if="showAddForm" class="add-programmation-form">
       <h3>Créer une nouvelle programmation</h3>
       <form @submit.prevent="addProgrammation" class="programmation-form">
-        
+
         <!-- Sélection du film -->
         <div class="form-section">
           <h4>🎬 Film</h4>
@@ -33,7 +29,7 @@
             <select id="film" v-model="newProgrammation.film_id" required>
               <option value="">Choisir un film</option>
               <option v-for="film in availableFilms" :key="film.id" :value="film.id">
-                {{ film.titre }} ({{ film.duree }}min)
+                {{ film.titre }} ({{ film.duree }})
               </option>
             </select>
           </div>
@@ -47,7 +43,7 @@
             <select id="cinema" v-model="newProgrammation.cinema_id" required>
               <option value="">Choisir un cinéma</option>
               <option v-for="cinema in availableCinemas" :key="cinema.id" :value="cinema.id">
-                {{ cinema.nom }} - {{ cinema.ville }}
+                {{ cinema.nom }} - {{ cinema.adresse?.ville || 'Ville inconnue' }}
               </option>
             </select>
           </div>
@@ -59,20 +55,20 @@
           <div class="form-row">
             <div class="form-group">
               <label for="date_debut">Date de début *</label>
-              <input 
-                type="date" 
-                id="date_debut" 
-                v-model="newProgrammation.date_debut" 
+              <input
+                type="date"
+                id="date_debut"
+                v-model="newProgrammation.date_debut"
                 required
                 :min="today"
               >
             </div>
             <div class="form-group">
               <label for="date_fin">Date de fin *</label>
-              <input 
-                type="date" 
-                id="date_fin" 
-                v-model="newProgrammation.date_fin" 
+              <input
+                type="date"
+                id="date_fin"
+                v-model="newProgrammation.date_fin"
                 required
                 :min="newProgrammation.date_debut || today"
               >
@@ -82,23 +78,23 @@
 
         <!-- Configuration des séances -->
         <div class="form-section">
-          <h4>🕐 Séances (3 jours par semaine)</h4>
-          <p class="help-text">Configurez les séances pour 3 jours de la semaine</p>
-          
+          <h4>🕐 Séances</h4>
+          <p class="help-text">Ajoutez autant de séances que vous voulez</p>
+
           <div class="seances-config">
             <div v-for="(seance, index) in newProgrammation.seances" :key="index" class="seance-item">
               <div class="seance-header">
                 <h5>Séance {{ index + 1 }}</h5>
-                <button 
-                  type="button" 
-                  @click="removeSeance(index)" 
+                <button
+                  type="button"
+                  @click="removeSeance(index)"
                   class="btn-remove"
                   v-if="newProgrammation.seances.length > 1"
                 >
                   🗑️
                 </button>
               </div>
-              
+
               <div class="form-row">
                 <div class="form-group">
                   <label>Jour de la semaine *</label>
@@ -115,20 +111,16 @@
                 </div>
                 <div class="form-group">
                   <label>Heure de début *</label>
-                  <input 
-                    type="time" 
-                    v-model="seance.heure_debut" 
-                    required
-                  >
+                  <input type="time" v-model="seance.heure_debut" required>
                 </div>
               </div>
             </div>
-            
-            <button 
-              type="button" 
-              @click="addSeance" 
+
+            <!-- ✅ plus de restriction -->
+            <button
+              type="button"
+              @click="addSeance"
               class="btn-add-seance"
-              v-if="newProgrammation.seances.length < 3"
             >
               ➕ Ajouter une séance
             </button>
@@ -161,13 +153,13 @@
               <button @click="deleteProgrammation(programmation.id)" class="btn-delete">🗑️</button>
             </div>
           </div>
-          
+
           <div class="programmation-details">
             <div class="period-section">
               <h5>📅 Période</h5>
               <p>Du {{ formatDate(programmation.date_debut) }} au {{ formatDate(programmation.date_fin) }}</p>
             </div>
-            
+
             <div class="seances-section">
               <h5>🕐 Séances</h5>
               <div class="seances-list">
@@ -178,9 +170,11 @@
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -200,24 +194,16 @@ const error = ref('')
 const isEditing = ref(false)
 const editingProgrammationId = ref(null)
 
-const today = computed(() => {
-  return new Date().toISOString().split('T')[0]
-})
+const today = computed(() => new Date().toISOString().split('T')[0])
 
 const newProgrammation = reactive({
   film_id: '',
   cinema_id: '',
   date_debut: '',
   date_fin: '',
-  seances: [
-    {
-      jour_semaine: '',
-      heure_debut: ''
-    }
-  ]
+  seances: [{ jour_semaine: '', heure_debut: '' }]
 })
 
-// Charger les programmations depuis la base de données
 const loadProgrammations = async () => {
   try {
     loading.value = true
@@ -225,14 +211,13 @@ const loadProgrammations = async () => {
     const data = await programmationsAPI.getAll()
     programmations.value = data.programmations || []
   } catch (err) {
-    error.value = 'Erreur lors du chargement des programmations: ' + err.message
+    error.value = 'Erreur lors du chargement des programmations: ' + (err.message || '')
     console.error('Erreur chargement programmations:', err)
   } finally {
     loading.value = false
   }
 }
 
-// Charger les films depuis la base de données
 const loadFilms = async () => {
   try {
     const data = await filmsAPI.getAll()
@@ -242,7 +227,6 @@ const loadFilms = async () => {
   }
 }
 
-// Charger les cinémas depuis la base de données
 const loadCinemas = async () => {
   try {
     const data = await cinemasAPI.getAll()
@@ -252,22 +236,12 @@ const loadCinemas = async () => {
   }
 }
 
-// Charger toutes les données au montage du composant
 onMounted(async () => {
-  await Promise.all([
-    loadProgrammations(),
-    loadFilms(),
-    loadCinemas()
-  ])
+  await Promise.all([loadProgrammations(), loadFilms(), loadCinemas()])
 })
 
 const addSeance = () => {
-  if (newProgrammation.seances.length < 3) {
-    newProgrammation.seances.push({
-      jour_semaine: '',
-      heure_debut: ''
-    })
-  }
+  newProgrammation.seances.push({ jour_semaine: '', heure_debut: '' })
 }
 
 const removeSeance = (index) => {
@@ -281,13 +255,13 @@ const addProgrammation = async () => {
     loading.value = true
     error.value = ''
 
-    // ✅ Beaucoup de backends imposent EXACTEMENT 3 séances (vu ton UI)
-    if (newProgrammation.seances.length !== 3) {
-      alert("Tu dois configurer exactement 3 séances (3 jours par semaine).")
+    // ✅ au moins 1 séance
+    if (!newProgrammation.seances.length) {
+      alert("Ajoute au moins une séance.")
       return
     }
 
-    // ✅ Vérif champs
+    // ✅ champs séances
     for (const s of newProgrammation.seances) {
       if (!s.jour_semaine || !s.heure_debut) {
         alert("Chaque séance doit avoir un jour + une heure.")
@@ -295,14 +269,13 @@ const addProgrammation = async () => {
       }
     }
 
-    // ✅ anti doublons de jours
+    // ✅ anti doublons de jours (si tu veux autoriser doublon, supprime ce bloc)
     const jours = newProgrammation.seances.map(s => s.jour_semaine)
     if (new Set(jours).size !== jours.length) {
       alert("Tu ne peux pas mettre deux fois le même jour.")
       return
     }
 
-    // ✅ Normalise l’heure => "18:30" devient "18:30:00"
     const normalizeTime = (t) => (t && t.length === 5 ? `${t}:00` : t)
 
     const payload = {
@@ -316,9 +289,6 @@ const addProgrammation = async () => {
       }))
     }
 
-    console.log("📤 Payload programmation envoyé :", payload)
-
-    // ✅ UPDATE ou CREATE
     if (isEditing.value && editingProgrammationId.value) {
       await programmationsAPI.update(editingProgrammationId.value, payload)
       alert("Programmation modifiée avec succès !")
@@ -334,34 +304,20 @@ const addProgrammation = async () => {
     isEditing.value = false
     editingProgrammationId.value = null
   } catch (err) {
-    // ✅ On affiche la VRAIE erreur backend si axios la renvoie
-    const backendMsg =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      JSON.stringify(err?.response?.data || "")
-
-    console.error("❌ Erreur backend programmation :", err?.response || err)
-
-    error.value = `Erreur lors de l’enregistrement : ${backendMsg || err.message}`
+    console.error("❌ Erreur programmation :", err)
+    error.value = `Erreur lors de l’enregistrement : ${err.message || 'Erreur inconnue'}`
     alert(error.value)
   } finally {
     loading.value = false
   }
 }
 
-
-
 const resetForm = () => {
   newProgrammation.film_id = ''
   newProgrammation.cinema_id = ''
   newProgrammation.date_debut = ''
   newProgrammation.date_fin = ''
-  newProgrammation.seances = [
-    {
-      jour_semaine: '',
-      heure_debut: ''
-    }
-  ]
+  newProgrammation.seances = [{ jour_semaine: '', heure_debut: '' }]
 }
 
 const editProgrammation = (programmation) => {
@@ -374,11 +330,9 @@ const editProgrammation = (programmation) => {
   newProgrammation.date_debut = (programmation.date_debut || '').slice(0, 10)
   newProgrammation.date_fin = (programmation.date_fin || '').slice(0, 10)
 
-  // Pré-remplir les séances
   if (programmation.seances && programmation.seances.length) {
     newProgrammation.seances = programmation.seances.map(s => ({
       jour_semaine: s.jour_semaine || '',
-      // "18:30:00" -> "18:30"
       heure_debut: (s.heure_debut || '').slice(0, 5)
     }))
   } else {
@@ -387,8 +341,6 @@ const editProgrammation = (programmation) => {
 
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
-
 
 const deleteProgrammation = async (programmationId) => {
   if (confirm('Êtes-vous sûr de vouloir supprimer cette programmation ?')) {
@@ -399,7 +351,7 @@ const deleteProgrammation = async (programmationId) => {
       await loadProgrammations()
       alert('Programmation supprimée avec succès !')
     } catch (err) {
-      error.value = 'Erreur lors de la suppression de la programmation: ' + err.message
+      error.value = 'Erreur lors de la suppression de la programmation: ' + (err.message || '')
       console.error('Erreur suppression programmation:', err)
       alert('Erreur lors de la suppression. Vérifiez la console.')
     } finally {
@@ -415,7 +367,8 @@ const getFilmTitle = (filmId) => {
 
 const getCinemaName = (cinemaId) => {
   const cinema = availableCinemas.value.find(c => c.id === cinemaId)
-  return cinema ? `${cinema.nom} (${cinema.ville})` : 'Cinéma inconnu'
+  const ville = cinema?.adresse?.ville || cinema?.ville || 'Ville inconnue'
+  return cinema ? `${cinema.nom} (${ville})` : 'Cinéma inconnu'
 }
 
 const formatDate = (dateString) => {
@@ -763,20 +716,20 @@ const formatDate = (dateString) => {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .programmations-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .add-programmation-form,
   .programmations-list {
     padding: 1rem;
   }
-  
+
   .form-section {
     padding: 1rem;
   }
