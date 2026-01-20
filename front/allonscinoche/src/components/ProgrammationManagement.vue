@@ -29,7 +29,7 @@
             <select id="film" v-model="newProgrammation.film_id" required>
               <option value="">Choisir un film</option>
               <option v-for="film in availableFilms" :key="film.id" :value="film.id">
-                {{ film.titre }} ({{ film.duree }}min)
+                {{ film.titre }} ({{ film.duree }})
               </option>
             </select>
           </div>
@@ -78,8 +78,13 @@
 
         <!-- Configuration des séances -->
         <div class="form-section">
+<<<<<<< HEAD
           <h4>🕐 Séances (3 jours par semaine)</h4>
           <p class="help-text">Configurez les séances pour 3 jours de la semaine</p>
+=======
+          <h4>🕐 Séances</h4>
+          <p class="help-text">Ajoutez autant de séances que vous voulez</p>
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
 
           <div class="seances-config">
             <div v-for="(seance, index) in newProgrammation.seances" :key="index" class="seance-item">
@@ -116,11 +121,14 @@
               </div>
             </div>
 
+<<<<<<< HEAD
+=======
+            <!-- ✅ plus de restriction -->
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
             <button
               type="button"
               @click="addSeance"
               class="btn-add-seance"
-              v-if="newProgrammation.seances.length < 3"
             >
               ➕ Ajouter une séance
             </button>
@@ -171,6 +179,7 @@
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -210,7 +219,7 @@ const loadProgrammations = async () => {
     const data = await programmationsAPI.getAll()
     programmations.value = data.programmations || []
   } catch (err) {
-    error.value = 'Erreur lors du chargement des programmations: ' + err.message
+    error.value = 'Erreur lors du chargement des programmations: ' + (err.message || '')
     console.error('Erreur chargement programmations:', err)
   } finally {
     loading.value = false
@@ -240,9 +249,13 @@ onMounted(async () => {
 })
 
 const addSeance = () => {
+<<<<<<< HEAD
   if (newProgrammation.seances.length < 3) {
     newProgrammation.seances.push({ jour_semaine: '', heure_debut: '' })
   }
+=======
+  newProgrammation.seances.push({ jour_semaine: '', heure_debut: '' })
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
 }
 
 const removeSeance = (index) => {
@@ -256,11 +269,21 @@ const addProgrammation = async () => {
     loading.value = true
     error.value = ''
 
+<<<<<<< HEAD
     if (newProgrammation.seances.length !== 3) {
       alert("Tu dois configurer exactement 3 séances (3 jours par semaine).")
       return
     }
 
+=======
+    // ✅ au moins 1 séance
+    if (!newProgrammation.seances.length) {
+      alert("Ajoute au moins une séance.")
+      return
+    }
+
+    // ✅ champs séances
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
     for (const s of newProgrammation.seances) {
       if (!s.jour_semaine || !s.heure_debut) {
         alert("Chaque séance doit avoir un jour + une heure.")
@@ -268,6 +291,10 @@ const addProgrammation = async () => {
       }
     }
 
+<<<<<<< HEAD
+=======
+    // ✅ anti doublons de jours (si tu veux autoriser doublon, supprime ce bloc)
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
     const jours = newProgrammation.seances.map(s => s.jour_semaine)
     if (new Set(jours).size !== jours.length) {
       alert("Tu ne peux pas mettre deux fois le même jour.")
@@ -301,6 +328,7 @@ const addProgrammation = async () => {
     isEditing.value = false
     editingProgrammationId.value = null
   } catch (err) {
+<<<<<<< HEAD
     const backendMsg =
       err?.response?.data?.message ||
       err?.response?.data?.error ||
@@ -308,6 +336,10 @@ const addProgrammation = async () => {
 
     console.error("❌ Erreur backend programmation :", err?.response || err)
     error.value = `Erreur lors de l’enregistrement : ${backendMsg || err.message}`
+=======
+    console.error("❌ Erreur programmation :", err)
+    error.value = `Erreur lors de l’enregistrement : ${err.message || 'Erreur inconnue'}`
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
     alert(error.value)
   } finally {
     loading.value = false
@@ -353,7 +385,7 @@ const deleteProgrammation = async (programmationId) => {
       await loadProgrammations()
       alert('Programmation supprimée avec succès !')
     } catch (err) {
-      error.value = 'Erreur lors de la suppression de la programmation: ' + err.message
+      error.value = 'Erreur lors de la suppression de la programmation: ' + (err.message || '')
       console.error('Erreur suppression programmation:', err)
       alert('Erreur lors de la suppression. Vérifiez la console.')
     } finally {
@@ -369,7 +401,11 @@ const getFilmTitle = (filmId) => {
 
 const getCinemaName = (cinemaId) => {
   const cinema = availableCinemas.value.find(c => c.id === cinemaId)
+<<<<<<< HEAD
   const ville = cinema?.adresse?.ville || 'Ville inconnue'
+=======
+  const ville = cinema?.adresse?.ville || cinema?.ville || 'Ville inconnue'
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
   return cinema ? `${cinema.nom} (${ville})` : 'Cinéma inconnu'
 }
 
@@ -465,4 +501,115 @@ const formatDate = (dateString) => {
   color: #c53030;
   margin-bottom: 1rem;
 }
+<<<<<<< HEAD
+=======
+
+.programmation-header h4 {
+  margin: 0 0 0.25rem 0;
+  color: #2d3748;
+  font-size: 1.25rem;
+}
+
+.cinema-name {
+  margin: 0;
+  color: #718096;
+  font-weight: 500;
+}
+
+.programmation-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-edit,
+.btn-delete {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-edit:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-delete:hover {
+  background-color: #fed7d7;
+}
+
+.programmation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.period-section h5,
+.seances-section h5 {
+  margin: 0 0 0.5rem 0;
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.period-section p {
+  margin: 0;
+  color: #4a5568;
+}
+
+.seances-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.seance-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.jour {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.heure {
+  color: #4a5568;
+  font-family: monospace;
+  background: #edf2f7;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .programmations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .add-programmation-form,
+  .programmations-list {
+    padding: 1rem;
+  }
+
+  .form-section {
+    padding: 1rem;
+  }
+}
+>>>>>>> 3f216e8b1b58655e11f0ad014dafec4a426bf63d
 </style>
